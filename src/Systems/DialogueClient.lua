@@ -1,48 +1,38 @@
 --[[
-    Arcadia Online - Dialogue Client
+    Arcadia Online - Dialogue Client (FIXED)
     
-    Handles dialogue UI and interaction:
-    - Talk to NPCs
-    - Display dialogue text
-    - Next line on click
+    Shows interaction prompt when near NPC
+    Press F to talk
     
     Place di: StarterPlayerScripts/Client (as LocalScript)
-    
-    @author arcadiastore
-    @version 1.0.0
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
--- Player reference
 local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 
 print("[DialogueClient] Dialogue Client initializing...")
 
--- Wait for Events folder
+-- Wait for Events
 local eventsFolder = ReplicatedStorage:WaitForChild("Events", 10)
 if not eventsFolder then
     warn("[DialogueClient] Events folder not found!")
     return
 end
 
--- Get RemoteEvents
 local dialogueEvent = eventsFolder:WaitForChild("DialogueEvent", 10)
-
 if not dialogueEvent then
     warn("[DialogueClient] Dialogue event not found!")
     return
 end
 
-print("[DialogueClient] Dialogue event found!")
-
 -- ============================================
 -- DIALOGUE UI
 -- ============================================
 
--- Create dialogue UI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "DialogueUI"
 screenGui.ResetOnSpawn = false
@@ -62,9 +52,8 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = dialogueFrame
 
--- NPC name label
+-- NPC name
 local npcNameLabel = Instance.new("TextLabel")
-npcNameLabel.Name = "NPCName"
 npcNameLabel.Size = UDim2.new(0, 200, 0, 30)
 npcNameLabel.Position = UDim2.new(0, 10, 0, 5)
 npcNameLabel.BackgroundTransparency = 1
@@ -78,7 +67,6 @@ npcNameLabel.Parent = dialogueFrame
 
 -- Dialogue text
 local dialogueText = Instance.new("TextLabel")
-dialogueText.Name = "Text"
 dialogueText.Size = UDim2.new(1, -20, 0, 60)
 dialogueText.Position = UDim2.new(0, 10, 0, 35)
 dialogueText.BackgroundTransparency = 1
@@ -93,7 +81,6 @@ dialogueText.Parent = dialogueFrame
 
 -- Continue prompt
 local continueLabel = Instance.new("TextLabel")
-continueLabel.Name = "Continue"
 continueLabel.Size = UDim2.new(0, 200, 0, 20)
 continueLabel.Position = UDim2.new(0.5, -100, 1, -25)
 continueLabel.BackgroundTransparency = 1
@@ -106,7 +93,6 @@ continueLabel.Parent = dialogueFrame
 
 -- Close button
 local closeButton = Instance.new("TextButton")
-closeButton.Name = "Close"
 closeButton.Size = UDim2.new(0, 30, 0, 30)
 closeButton.Position = UDim2.new(1, -35, 0, 5)
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -122,10 +108,18 @@ closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = closeButton
 
 -- ============================================
+-- INTERACTION PROMPT (Shared with QuestClient)
+-- ============================================
+
+-- This is handled by QuestClient.lua
+-- No duplicate prompt needed
+
+-- ============================================
 -- DIALOGUE FUNCTIONS
 -- ============================================
 
--- Typewriter effect
+local isDialogueOpen = false
+
 local function typewriterEffect(text, label)
     label.Text = ""
     for i = 1, #text do
@@ -134,36 +128,32 @@ local function typewriterEffect(text, label)
     end
 end
 
--- Show dialogue line
 local function showDialogueLine(data)
-    -- Update NPC name
     npcNameLabel.Text = data.npcId
     
-    -- Typewriter effect
     typewriterEffect(data.line.text, dialogueText)
     
-    -- Update continue prompt
     if data.lineIndex >= data.totalLines then
         continueLabel.Text = "Click to close..."
     else
         continueLabel.Text = "Click to continue..."
     end
     
-    -- Show frame
     dialogueFrame.Visible = true
+    isDialogueOpen = true
 end
 
--- Close dialogue
 local function closeDialogue()
     dialogueFrame.Visible = false
     dialogueText.Text = ""
+    isDialogueOpen = false
 end
 
 -- ============================================
 -- INPUT HANDLING
 -- ============================================
 
--- Click to continue dialogue
+-- Click to continue
 dialogueFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dialogueEvent:FireServer("next")
@@ -177,24 +167,39 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 -- F key to interact with NPCs
-local mouse = player:GetMouse()
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then
-        return
-    end
+    if gameProcessed then return end
     
     if input.KeyCode == Enum.KeyCode.F then
-        -- Check if clicked on NPC
+        -- Don't interact if dialogue is already open
+        if isDialogueOpen then
+            return
+        end
+        
         local target = mouse.Target
         if target then
             local npcId = target:GetAttribute("NPCId")
-            if npcId then
+            local npcName = target:GetAttribute("NPCName")
+            
+            if npcId and npcName then
                 -- Start dialogue
                 dialogueEvent:FireServer("start", {
                     npcId = npcId,
                 })
-                print("[DialogueClient] Talking to: " .. target:GetAttribute("NPCName"))
+                print("[DialogueClient] Talking to: " .. npcName)
             end
+        end
+    end
+end)
+
+-- ESC to close dialogue
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.Escape then
+        if isDialogueOpen then
+            dialogueEvent:FireServer("close")
+            closeDialogue()
         end
     end
 end)
@@ -205,15 +210,12 @@ end)
 
 dialogueEvent.OnClientEvent:Connect(function(data)
     if data.type == "DialogueStarted" then
-        -- Show dialogue
         showDialogueLine(data)
         
     elseif data.type == "DialogueLine" then
-        -- Show next line
         showDialogueLine(data)
         
     elseif data.type == "DialogueClosed" then
-        -- Close dialogue
         closeDialogue()
     end
 end)
