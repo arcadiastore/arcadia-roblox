@@ -14,17 +14,17 @@ local player = Players.LocalPlayer
 local gui, frame = nil, nil
 local autoCombatBtn = nil
 local autoCombatEnabled = false
-local currentTarget = nil  -- Lock target until dead
+local currentTarget = nil
 
 -- Auto quest state
 local autoQuestActive = false
-local autoQuestPhase = "idle"  -- "idle", "fighting", "walking_to_npc", "reporting", "walking_to_monster"
+local autoQuestPhase = "idle"  -- "idle", "fighting", "walking_to_npc", "reporting"
 local autoQuestTarget = nil  -- monster type to kill
 local autoQuestNPC = nil  -- NPC to report to
 local autoQuestId = nil  -- current quest ID
 
 local ATTACK_RANGE = 30
-local NPC_INTERACT_RANGE = 12
+local NPC_INTERACT_RANGE = 20  -- Increased from 12
 
 -- Get GameData
 local function getGameData()
@@ -96,7 +96,7 @@ local function getNPCPart(npcId)
     return npcFolder:FindFirstChild(npcId)
 end
 
--- Move toward target
+-- Move toward target (called repeatedly)
 local function moveToward(targetPos)
     local character = player.Character
     if not character then return end
@@ -126,105 +126,55 @@ local function getDistTo(pos)
     return (pos - rootPart.Position).Magnitude
 end
 
--- Check if quest objectives are complete
-local function isQuestComplete(questId, progress)
-    local GameData = getGameData()
-    if not GameData then return false end
-    
-    local questData = GameData:GetQuest(questId)
-    if not questData then return false end
-    
-    for i, obj in ipairs(questData.objectives) do
-        local prog = progress and progress[i] or 0
-        if prog < obj.count then
-            return false
-        end
-    end
-    return true
-end
-
--- Find quest target monster type from objectives
-local function getQuestMonsterType(questId)
-    local GameData = getGameData()
-    if not GameData then return nil end
-    
-    local questData = GameData:GetQuest(questId)
-    if not questData then return nil end
-    
-    for _, obj in ipairs(questData.objectives) do
-        if obj.type == "kill" and obj.target then
-            return obj.target
-        end
-    end
-    return nil
-end
-
--- Find quest giver NPC
-local function getQuestGiver(questId)
-    local GameData = getGameData()
-    if not GameData then return nil end
-    
-    local questData = GameData:GetQuest(questId)
-    if not questData then return nil end
-    
-    return questData.giver
-end
-
--- Interact with NPC (click)
-local function clickNPC(npcPart)
-    if not npcPart then return end
-    local clickDetector = npcPart:FindFirstChild("ClickDetector")
-    if clickDetector then
-        -- Fire click event
-        local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
-        if DialogueEvent then
-            local npcId = npcPart:GetAttribute("NPCId") or npcPart.Name
-            DialogueEvent:FireServer("talk", npcId)
-        end
-    end
-end
-
--- Auto report to NPC: send quest complete response
-local function reportToNPC(questId)
+-- Interact with NPC
+local function interactNPC(npcId)
     local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
     if DialogueEvent then
-        DialogueEvent:FireServer("respond", "quest_complete_" .. questId)
-        task.wait(0.5)
-        -- Also try generic complete
-        DialogueEvent:FireServer("respond", "Ambil reward!")
-        task.wait(0.5)
-        DialogueEvent:FireServer("respond", "Terima kasih!")
+        DialogueEvent:FireServer("talk", npcId)
     end
 end
 
--- Auto accept next quest from NPC
-local function tryAcceptNextQuest(npcId)
+-- Send dialogue response
+local function sendResponse(text)
+    local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
+    if DialogueEvent then
+        DialogueEvent:FireServer("respond", text)
+    end
+end
+
+-- Report quest and accept next
+local function doReporting(npcId, questId)
+    -- Step 1: Talk to NPC
+    interactNPC(npcId)
+    task.wait(1)
+    
+    -- Step 2: Try quest completion responses
+    sendResponse("Ambil reward!")
+    task.wait(0.8)
+    sendResponse("Terima kasih!")
+    task.wait(0.8)
+    sendResponse("Saya akan membantu!")
+    task.wait(0.8)
+    
+    -- Step 3: Try accept new quest
+    sendResponse("Saya terima quest ini!")
+    task.wait(0.8)
+    sendResponse("Baik!")
+    task.wait(0.8)
+    
+    -- Step 4: Exit dialogue
+    sendResponse("exit")
     task.wait(0.5)
-    local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
-    if DialogueEvent then
-        -- Try to accept quest
-        DialogueEvent:FireServer("respond", "Saya terima quest ini!")
-        task.wait(0.5)
-        DialogueEvent:FireServer("respond", "Saya akan membantu!")
-        task.wait(0.5)
-        DialogueEvent:FireServer("respond", "Baik!")
-        task.wait(0.5)
-        DialogueEvent:FireServer("respond", "Sama-sama!")
-    end
+    
+    print("[AutoPanel] Reporting done for quest: " .. tostring(questId))
 end
 
 -- Main auto quest loop
 local function autoQuestLoop()
     while autoQuestActive do
-        -- Find active quest info
-        local playerData = nil
-        local GetDataEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("GetDataEvent")
-        -- We'll track via HUD updates
-        
         -- Phase: Fighting
         if autoQuestPhase == "fighting" then
             if not autoQuestTarget then
-                -- No target, stop
                 autoQuestPhase = "idle"
                 task.wait(1)
                 continue
@@ -248,9 +198,6 @@ local function autoQuestLoop()
                 end
             end
             
-            -- Check if quest complete (will be updated via server)
-            -- Transition to reporting happens when server sends quest ready
-            
         -- Phase: Walking to NPC
         elseif autoQuestPhase == "walking_to_npc" then
             if not autoQuestNPC then
@@ -263,7 +210,6 @@ local function autoQuestLoop()
             if npcPart then
                 local dist = getDistTo(npcPart.Position)
                 if dist <= NPC_INTERACT_RANGE then
-                    -- Arrived at NPC
                     stopMoving()
                     autoQuestPhase = "reporting"
                 else
@@ -273,40 +219,27 @@ local function autoQuestLoop()
             
         -- Phase: Reporting to NPC
         elseif autoQuestPhase == "reporting" then
-            -- Talk to NPC
-            local npcPart = getNPCPart(autoQuestNPC)
-            if npcPart then
-                clickNPC(npcPart)
-                task.wait(1)
-                reportToNPC(autoQuestId)
-                task.wait(1)
-                
-                -- Try accept next quest
-                tryAcceptNextQuest(autoQuestNPC)
-                task.wait(1)
-                
-                -- Close dialogue
-                local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
-                if DialogueEvent then
-                    DialogueEvent:FireServer("respond", "exit")
-                end
-                
-                -- Reset for next quest cycle
-                autoQuestPhase = "idle"
-                autoQuestId = nil
-                autoQuestNPC = nil
-                autoQuestTarget = nil
-                currentTarget = nil
-                
-                -- Wait a bit then check for new quest
-                task.wait(2)
-            else
-                autoQuestPhase = "idle"
-            end
+            stopMoving()
+            doReporting(autoQuestNPC, autoQuestId)
             
-        -- Phase: Idle - wait for quest assignment
+            -- Reset for next cycle
+            autoQuestPhase = "idle"
+            local prevNPC = autoQuestNPC
+            autoQuestId = nil
+            autoQuestNPC = nil
+            autoQuestTarget = nil
+            currentTarget = nil
+            
+            -- Wait then restart cycle with same NPC
+            task.wait(3)
+            
+            -- Check if there's a new quest from same NPC
+            -- The doReporting should have accepted new quest
+            -- Reset to fighting if we have a new quest target
+            autoQuestPhase = "idle"
+            
+        -- Phase: Idle
         elseif autoQuestPhase == "idle" then
-            -- Wait for quest to be set via StartAutoQuest
             task.wait(1)
         end
         
@@ -318,10 +251,15 @@ local function autoQuestLoop()
     stopMoving()
 end
 
--- Auto combat loop (independent of quest)
+-- Auto combat loop (independent)
 local function autoCombatLoop()
     while autoCombatEnabled do
-        -- Check if current target is still valid
+        -- Skip if auto quest is handling combat
+        if autoQuestActive and autoQuestPhase == "fighting" then
+            task.wait(0.5)
+            continue
+        end
+        
         if currentTarget then
             local hp = currentTarget:GetAttribute("CurrentHP") or 0
             if hp <= 0 or not currentTarget.Parent then
@@ -330,17 +268,10 @@ local function autoCombatLoop()
             end
         end
         
-        -- Find target if none
         if not currentTarget then
-            if autoQuestActive and autoQuestTarget then
-                currentTarget = getMonsterByType(autoQuestTarget)
-            end
-            if not currentTarget then
-                currentTarget = getNearestMonster()
-            end
+            currentTarget = getNearestMonster()
         end
         
-        -- Attack or move
         if currentTarget then
             local character = player.Character
             if character then
@@ -368,7 +299,7 @@ local function autoCombatLoop()
     stopMoving()
 end
 
--- Start auto quest (called when clicking quest in tracker)
+-- Start auto quest
 function AutoPanel:StartAutoQuest(monsterType, questId, npcId)
     autoQuestActive = true
     autoQuestTarget = monsterType
@@ -386,18 +317,18 @@ function AutoPanel:StartAutoQuest(monsterType, questId, npcId)
         task.spawn(autoCombatLoop)
     end
     
-    -- Start quest loop if not running
     task.spawn(autoQuestLoop)
-    
-    print("[AutoPanel] Auto Quest started: kill " .. tostring(monsterType) .. " -> report to " .. tostring(npcId))
+    print("[AutoPanel] Auto Quest: kill " .. tostring(monsterType) .. " -> " .. tostring(npcId))
 end
 
 -- Called when server says quest is ready to complete
 function AutoPanel:QuestReady(questId)
     if autoQuestActive and autoQuestId == questId then
-        autoQuestPhase = "walking_to_npc"
-        currentTarget = nil
-        print("[AutoPanel] Quest ready, walking to NPC: " .. tostring(autoQuestNPC))
+        if autoQuestPhase == "fighting" then
+            autoQuestPhase = "walking_to_npc"
+            currentTarget = nil
+            print("[AutoPanel] Quest ready! Walking to NPC: " .. tostring(autoQuestNPC))
+        end
     end
 end
 
@@ -410,7 +341,6 @@ function AutoPanel:StopAutoQuest()
     autoQuestId = nil
     currentTarget = nil
     stopMoving()
-    print("[AutoPanel] Auto Quest stopped")
 end
 
 function AutoPanel:Create(playerGui)
@@ -419,7 +349,6 @@ function AutoPanel:Create(playerGui)
     gui.ResetOnSpawn = false
     gui.Parent = playerGui
     
-    -- Panel frame (bottom center)
     frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 150, 0, 40)
     frame.Position = UDim2.new(0.5, -75, 1, -50)
@@ -429,7 +358,6 @@ function AutoPanel:Create(playerGui)
     frame.Parent = gui
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
-    -- Auto Combat toggle button
     autoCombatBtn = Instance.new("TextButton")
     autoCombatBtn.Size = UDim2.new(0.95, 0, 0.8, 0)
     autoCombatBtn.Position = UDim2.new(0.025, 0, 0.1, 0)
@@ -441,7 +369,6 @@ function AutoPanel:Create(playerGui)
     autoCombatBtn.Parent = frame
     Instance.new("UICorner", autoCombatBtn).CornerRadius = UDim.new(0, 6)
     
-    -- Toggle Auto Combat
     autoCombatBtn.MouseButton1Click:Connect(function()
         autoCombatEnabled = not autoCombatEnabled
         if autoCombatEnabled then
@@ -468,24 +395,19 @@ function AutoPanel:Create(playerGui)
 end
 
 function AutoPanel:Update(data)
-    -- Check if current auto quest is complete
+    -- Check quest completion from server data
     if autoQuestActive and autoQuestId and data.activeQuests then
         local quest = data.activeQuests[autoQuestId]
-        if quest and quest.readyToComplete then
-            -- Quest ready, switch to walking to NPC
-            if autoQuestPhase == "fighting" then
-                autoQuestPhase = "walking_to_npc"
-                currentTarget = nil
-                print("[AutoPanel] Quest ready! Walking to NPC...")
-            end
+        if quest and quest.readyToComplete and autoQuestPhase == "fighting" then
+            autoQuestPhase = "walking_to_npc"
+            currentTarget = nil
+            print("[AutoPanel] Quest ready from Update! Walking to NPC")
         elseif not quest then
-            -- Quest completed or removed
-            if autoQuestPhase == "idle" and autoQuestActive then
-                -- Try to find and accept next quest from same NPC
-                if autoQuestNPC then
-                    -- Restart cycle - talk to NPC for new quest
-                    autoQuestPhase = "reporting"
-                end
+            -- Quest completed, try restart with same NPC
+            if autoQuestActive and autoQuestNPC then
+                task.wait(2)
+                -- Talk to NPC for new quest
+                autoQuestPhase = "reporting"
             end
         end
     end
