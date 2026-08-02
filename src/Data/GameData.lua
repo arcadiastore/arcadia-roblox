@@ -21,16 +21,29 @@
 
 local GameData = {}
 
--- Load all data modules
-GameData.Monsters = require(script:WaitForChild("Monsters"))
-GameData.Items = require(script:WaitForChild("Items"))
-GameData.Skills = require(script:WaitForChild("Skills"))
-GameData.Quests = require(script:WaitForChild("Quests"))
-GameData.NPCs = require(script:WaitForChild("NPCs"))
-GameData.Shops = require(script:WaitForChild("Shops"))
-GameData.Dialogues = require(script:WaitForChild("Dialogues"))
-GameData.SpawnPositions = require(script:WaitForChild("SpawnPositions"))
-GameData.Formulas = require(script:WaitForChild("Formulas"))
+-- Helper function to safely require modules
+local function safeRequire(parent, name)
+    local success, result = pcall(function()
+        return require(parent:WaitForChild(name, 5))
+    end)
+    if success then
+        return result
+    else
+        warn("[GameData] Module not found: " .. name .. " - using empty table")
+        return {}
+    end
+end
+
+-- Load all data modules (with fallback)
+GameData.Monsters = safeRequire(script, "Monsters")
+GameData.Items = safeRequire(script, "Items")
+GameData.Skills = safeRequire(script, "Skills")  -- Optional, won't crash if missing
+GameData.Quests = safeRequire(script, "Quests")
+GameData.NPCs = safeRequire(script, "NPCs")
+GameData.Shops = safeRequire(script, "Shops")
+GameData.Dialogues = safeRequire(script, "Dialogues")
+GameData.SpawnPositions = safeRequire(script, "SpawnPositions")
+GameData.Formulas = safeRequire(script, "Formulas")
 
 -- ============================================
 -- GETTER FUNCTIONS
