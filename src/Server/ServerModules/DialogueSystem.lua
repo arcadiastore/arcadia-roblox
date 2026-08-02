@@ -23,7 +23,6 @@ local exitResponses = {
     ["Baik, saya akan pergi!"] = true,
     ["Baik, saya akan latihan dulu!"] = true,
     ["Baik, saya akan menyelesaikannya dulu!"] = true,
-    ["Saya akan membantu!"] = true,
     ["Terima kasih atas bantuanmu!"] = true,
 }
 
