@@ -606,17 +606,25 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             return
         end
         
-        -- Handle decline/exit responses
-        if responseText == "✗ Nanti saja, saya belum siap." 
-            or responseText == "Nanti saja, saya belum siap." 
-            or responseText == "Nanti saja."
-            or responseText == "Sama-sama!"
-            or responseText == "Baik, saya akan menyelesaikannya!"
-            or responseText == "Saya akan kembali nanti."
-            or responseText == "Terima kasih!"
-            or responseText == "Saya akan pergi!"
-            or responseText == "Baik, saya akan pergi!" then
-            -- End dialogue
+        -- Handle decline/exit responses (ANY response not in dialogue data)
+        -- These are dynamic responses that end the dialogue
+        local exitResponses = {
+            ["✗ Nanti saja, saya belum siap."] = true,
+            ["Nanti saja, saya belum siap."] = true,
+            ["Nanti saja."] = true,
+            ["Sama-sama!"] = true,
+            ["Baik, saya akan menyelesaikannya!"] = true,
+            ["Saya akan kembali nanti."] = true,
+            ["Terima kasih!"] = true,
+            ["Saya akan pergi!"] = true,
+            ["Baik, saya akan pergi!"] = true,
+            ["Baik, saya akan latihan dulu!"] = true,
+            ["Baik, saya akan menyelesaikannya dulu!"] = true,
+            ["Saya akan membantu!"] = true,
+            ["Terima kasih atas bantuanmu!"] = true,
+        }
+        
+        if exitResponses[responseText] then
             playerDialogueState[player.UserId] = nil
             DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
             return
