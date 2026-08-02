@@ -37,9 +37,14 @@ function ShopSystem:BuyItem(player, data, itemId, events)
         return false
     end
     
+    print("[Shop] Buy attempt: " .. itemId .. " price=" .. tostring(itemData.price) .. " gold=" .. tostring(data.gold) .. " type_price=" .. type(itemData.price) .. " type_gold=" .. type(data.gold))
+    
     -- Check gold
-    if data.gold < (itemData.price or 0) then
-        events.ShopEvent:FireClient(player, {type = "Error", message = "Gold tidak cukup!"})
+    local price = tonumber(itemData.price) or 0
+    local gold = tonumber(data.gold) or 0
+    if gold < price then
+        print("[Shop] Not enough gold! Need " .. price .. " have " .. gold)
+        events.ShopEvent:FireClient(player, {type = "Error", message = "Gold tidak cukup! Butuh " .. price .. "G"})
         return false
     end
     
