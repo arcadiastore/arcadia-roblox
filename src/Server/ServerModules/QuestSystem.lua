@@ -184,4 +184,84 @@ function QuestSystem:GetRejectionMessage(data, questData)
     return "Quest tidak tersedia."
 end
 
+-- Auto Report: complete ready quest + accept next available quest
+function QuestSystem:AutoReport(player, data, npcId, events)
+    local completed = false
+    local accepted = false
+    
+    -- Step 1: Complete any ready quest for this NPC
+    local readyQuestId, readyQuestData = self:GetReadyQuest(data, npcId)
+    if readyQuestId then
+        -- Give rewards
+        if readyQuestData.rewards.exp then
+            data.exp = data.exp + readyQuestData.rewards.exp
+        end
+        if readyQuestData.rewards.gold then
+            data.gold = data.gold + readyQuestData.rewards.gold
+        end
+        if readyQuestData.rewards.items then
+            local PlayerData = require(script.Parent.PlayerData)
+            for _, item in ipairs(readyQuestData.rewards.items) do
+                PlayerData:AddItem(player, item.itemId, item.count, events)
+            end
+        end
+        
+        -- Mark completed
+        data.completedQuests[readyQuestId] = true
+        data.activeQuests[readyQuestId] = nil
+        
+        -- Notify
+        events.UpdateEvent:FireClient(player, {
+            type = "QuestCompleted",
+            questId = readyQuestId,
+            questName = readyQuestData.name,
+            rewards = "+" .. (readyQuestData.rewards.exp or 0) .. " EXP, +" .. (readyQuestData.rewards.gold or 0) .. " Gold",
+        })
+        
+        -- Check level up
+        local PlayerData = require(script.Parent.PlayerData)
+        PlayerData:CheckLevelUp(player, events)
+        
+        completed = true
+        print("[Quest] AutoReport: " .. player.Name .. " completed " .. readyQuestId)
+    end
+    
+    -- Step 2: Accept next available quest from this NPC
+    for questId, qData in pairs(GameData.Quests or {}) do
+        if qData.giver == npcId and not data.activeQuests[questId] and not data.completedQuests[questId] then
+            -- Check level
+            if not qData.level or data.level >= qData.level then
+                -- Check prerequisite
+                if not qData.prerequisite or data.completedQuests[qData.prerequisite] then
+                    -- Accept quest
+                    data.activeQuests[questId] = {
+                        id = questId,
+                        progress = {},
+                        readyToComplete = false,
+                    }
+                    for i, obj in ipairs(qData.objectives) do
+                        data.activeQuests[questId].progress[i] = 0
+                    end
+                    
+                    events.UpdateEvent:FireClient(player, {
+                        type = "QuestAccepted",
+                        questId = questId,
+                        questName = qData.name,
+                    })
+                    
+                    accepted = true
+                    print("[Quest] AutoReport: " .. player.Name .. " accepted " .. questId)
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Send update
+    local PlayerData = require(script.Parent.PlayerData)
+    PlayerData:SendUpdate(player, events)
+    
+    return completed, accepted
+end
+
 return QuestSystem
