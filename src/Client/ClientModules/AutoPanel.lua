@@ -130,7 +130,7 @@ end
 local function interactNPC(npcId)
     local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
     if DialogueEvent then
-        DialogueEvent:FireServer("talk", npcId)
+        DialogueEvent:FireServer("talk", {npcId = npcId})
     end
 end
 
@@ -138,29 +138,27 @@ end
 local function sendResponse(text)
     local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
     if DialogueEvent then
-        DialogueEvent:FireServer("respond", text)
+        DialogueEvent:FireServer("respond", {response = text})
     end
 end
 
 -- Report quest and accept next
 local function doReporting(npcId, questId)
-    -- Step 1: Talk to NPC
+    -- Step 1: Talk to NPC (must succeed to establish dialogue state)
     interactNPC(npcId)
-    task.wait(1)
+    task.wait(1.5)  -- Wait for dialogue state to establish
     
     -- Step 2: Try quest completion responses
     sendResponse("Ambil reward!")
-    task.wait(0.8)
+    task.wait(1)
     sendResponse("Terima kasih!")
-    task.wait(0.8)
-    sendResponse("Saya akan membantu!")
-    task.wait(0.8)
+    task.wait(1)
     
     -- Step 3: Try accept new quest
     sendResponse("Saya terima quest ini!")
-    task.wait(0.8)
+    task.wait(1)
     sendResponse("Baik!")
-    task.wait(0.8)
+    task.wait(1)
     
     -- Step 4: Exit dialogue
     sendResponse("exit")
