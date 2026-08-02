@@ -141,13 +141,14 @@ function CombatSystem:OnMonsterDeath(player, monsterPart, monsterId, monsterData
             end
             if billboard then
                 billboard.Enabled = true
-                -- Reset HP text
-                local hpLabel = billboard:FindFirstChild("HPLabel")
-                if hpLabel then
-                    hpLabel.Text = "HP: " .. monsterData.hp .. "/" .. monsterData.hp
-                    hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-                end
             end
+            
+            -- Notify all clients to reset HP display
+            events.UpdateEvent:FireAllClients({
+                type = "MonsterRespawn",
+                monsterName = monsterPart.Name,
+                maxHP = monsterData.hp,
+            })
             
             print("[Combat] Monster respawned: " .. monsterId)
         end

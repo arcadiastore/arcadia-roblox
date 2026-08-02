@@ -129,6 +129,23 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         local npcData = GameData:GetNPC(data.npcName)
         local npcName = npcData and npcData.name or data.npcName
         Notification:QuestReady(data.questName, npcName)
+        
+    elseif data.type == "MonsterRespawn" then
+        -- Reset HP display on respawned monster
+        local monsterFolder = workspace:FindFirstChild("Monsters")
+        if monsterFolder and data.monsterName then
+            local monsterPart = monsterFolder:FindFirstChild(data.monsterName)
+            if monsterPart then
+                local billboard = monsterPart:FindFirstChild("NameTag")
+                if billboard then
+                    local hpLabel = billboard:FindFirstChild("HPLabel")
+                    if hpLabel then
+                        hpLabel.Text = "HP: " .. data.maxHP .. "/" .. data.maxHP
+                        hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+                    end
+                end
+            end
+        end
     end
 end)
 
