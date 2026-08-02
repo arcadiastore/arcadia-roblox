@@ -660,76 +660,109 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                 -- Check if next node gives quest
                 if nextNode.questId then
                     local questData = GameData:GetQuest(nextNode.questId)
-                    if questData and not pData.activeQuests[nextNode.questId] and not pData.completedQuests[nextNode.questId] then
-                        local canAccept = true
-                        if questData.prerequisite and not pData.completedQuests[questData.prerequisite] then
-                            canAccept = false
-                        end
-                        
-                        if canAccept then
-                            -- SHOW QUEST PREVIEW - Player must choose!
-                            local questPreview = buildQuestPreview(questData)
-                            
-                            -- Update state to track quest node
-                            playerDialogueState[player.UserId] = {
-                                npcId = npcId,
-                                currentNode = selected.next,  -- Keep track of quest node
-                            }
+                    if questData then
+                        -- CHECK 1: Already active?
+                        if pData.activeQuests[nextNode.questId] then
+                            local quest = pData.activeQuests[nextNode.questId]
+                            local statusText = "Kamu masih dalam quest: " .. questData.name .. "\n\n"
+                            for i, obj in ipairs(questData.objectives) do
+                                local prog = quest.progress[i] or 0
+                                local done = prog >= obj.count
+                                local status = done and "✓" or ">"
+                                statusText = statusText .. status .. " " .. obj.description .. ": " .. prog .. "/" .. obj.count .. "\n"
+                            end
                             
                             DialogueEvent:FireClient(player, {
                                 type = "Continue",
                                 npcId = npcId,
                                 npcName = npcData and npcData.name or npcId,
                                 dialogue = {
-                                    text = nextNode.text .. "\n\n" .. questPreview,
-                                    questId = nextNode.questId,
+                                    text = statusText,
                                     responses = {
-                                        {text = "✓ Saya terima quest ini!", next = "accept_quest"},
-                                        {text = "✗ Nanti saja, saya belum siap.", next = nil},
+                                        {text = "Baik, saya akan menyelesaikannya!", next = nil},
                                     },
                                 },
                             })
                             return
                         end
-                    end
-                    
-                    -- Quest already active or completed - show status
-                    if pData.activeQuests[nextNode.questId] then
-                        local quest = pData.activeQuests[nextNode.questId]
-                        local questInfo = GameData:GetQuest(nextNode.questId)
-                        local statusText = "Kamu masih dalam quest: " .. questInfo.name .. "\n\n"
-                        for i, obj in ipairs(questInfo.objectives) do
-                            local prog = quest.progress[i] or 0
-                            local done = prog >= obj.count
-                            local status = done and "✓" or ">"
-                            statusText = statusText .. status .. " " .. obj.description .. ": " .. prog .. "/" .. obj.count .. "\n"
+                        
+                        -- CHECK 2: Already completed?
+                        if pData.completedQuests[nextNode.questId] then
+                            DialogueEvent:FireClient(player, {
+                                type = "Continue",
+                                npcId = npcId,
+                                npcName = npcData and npcData.name or npcId,
+                                dialogue = {
+                                    text = "Kau sudah menyelesaikan quest \"" .. questData.name .. "\". Terima kasih atas bantuanmu!",
+                                    responses = {
+                                        {text = "Sama-sama!", next = nil},
+                                    },
+                                },
+                            })
+                            return
                         end
+                        
+                        -- CHECK 3: Level too low?
+                        if questData.level and pData.level < questData.level then
+                            DialogueEvent:FireClient(player, {
+                                type = "Continue",
+                                npcId = npcId,
+                                npcName = npcData and npcData.name or npcId,
+                                dialogue = {
+                                    text = "Maaf, kamu belum cukup kuat untuk quest ini.\n\nKamu butuh Level " .. questData.level .. " untuk \"" .. questData.name .. "\".\n(Level kamu sekarang: " .. pData.level .. ")",
+                                    responses = {
+                                        {text = "Baik, saya akan latihan dulu!", next = nil},
+                                    },
+                                },
+                            })
+                            return
+                        end
+                        
+                        -- CHECK 4: Prerequisite not met?
+                        if questData.prerequisite and not pData.completedQuests[questData.prerequisite] then
+                            local prereqData = GameData:GetQuest(questData.prerequisite)
+                            local prereqName = prereqData and prereqData.name or questData.prerequisite
+                            local prereqGiver = prereqData and prereqData.giver or "NPC lain"
+                            local prereqNpcData = GameData:GetNPC(prereqGiver)
+                            local prereqNpcName = prereqNpcData and prereqNpcData.name or prereqGiver
+                            
+                            DialogueEvent:FireClient(player, {
+                                type = "Continue",
+                                npcId = npcId,
+                                npcName = npcData and npcData.name or npcId,
+                                dialogue = {
+                                    text = "Maaf, kamu belum bisa mengambil quest ini.\n\nKamu harus menyelesaikan quest \"" .. prereqName .. "\" dari " .. prereqNpcName .. " terlebih dahulu.",
+                                    responses = {
+                                        {text = "Baik, saya akan menyelesaikannya dulu!", next = nil},
+                                    },
+                                },
+                            })
+                            return
+                        end
+                        
+                        -- CAN ACCEPT - Show quest preview
+                        local questPreview = buildQuestPreview(questData)
+                        
+                        playerDialogueState[player.UserId] = {
+                            npcId = npcId,
+                            currentNode = selected.next,
+                        }
                         
                         DialogueEvent:FireClient(player, {
                             type = "Continue",
                             npcId = npcId,
                             npcName = npcData and npcData.name or npcId,
                             dialogue = {
-                                text = statusText,
+                                text = nextNode.text .. "\n\n" .. questPreview,
+                                questId = nextNode.questId,
                                 responses = {
-                                    {text = "Baik, saya akan menyelesaikannya!", next = nil},
+                                    {text = "✓ Saya terima quest ini!", next = "accept_quest"},
+                                    {text = "✗ Nanti saja, saya belum siap.", next = nil},
                                 },
                             },
                         })
-                    else
-                        DialogueEvent:FireClient(player, {
-                            type = "Continue",
-                            npcId = npcId,
-                            npcName = npcData and npcData.name or npcId,
-                            dialogue = {
-                                text = "Kau sudah menyelesaikan quest itu. Terima kasih!",
-                                responses = {
-                                    {text = "Sama-sama!", next = nil},
-                                },
-                            },
-                        })
+                        return
                     end
-                    return
                 end
                 
                 -- Handle quest acceptance
