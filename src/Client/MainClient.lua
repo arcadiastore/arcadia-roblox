@@ -328,14 +328,30 @@ UpdateEvent.OnClientEvent:Connect(function(data)
                 local questData = require(ReplicatedStorage:WaitForChild("GameData")):GetQuest(questId)
                 if questData then
                     questText = questText .. questData.name .. "\n"
+                    
+                    -- Show objectives
+                    local allComplete = true
                     for i, obj in ipairs(questData.objectives) do
                         local prog = quest.progress[i] or 0
-                        questText = questText .. "  " .. obj.target .. ": " .. prog .. "/" .. obj.count .. "\n"
+                        local done = prog >= obj.count
+                        if not done then allComplete = false end
+                        
+                        local status = done and "✓" or ">"
+                        questText = questText .. "  " .. status .. " " .. obj.target .. ": " .. prog .. "/" .. obj.count .. "\n"
                     end
+                    
+                    -- If quest ready to complete, show return message
+                    if quest.readyToComplete or allComplete then
+                        local npcData = require(ReplicatedStorage:WaitForChild("GameData")):GetNPC(questData.giver)
+                        local npcName = npcData and npcData.name or questData.giver
+                        questText = questText .. "  → Kembali ke " .. npcName .. " untuk ambil reward!\n"
+                    end
+                    
+                    questText = questText .. "\n"
                 end
             end
         end
-        questList.Text = questText ~= "" and questText or "No active quests"
+        questList.Text = questText ~= "" and questText or "Tidak ada quest aktif"
         
     elseif data.type == "QuestAccepted" then
         notificationLabel.Text = "Quest Accepted: " .. data.questName
@@ -348,6 +364,16 @@ UpdateEvent.OnClientEvent:Connect(function(data)
     elseif data.type == "QuestCompleted" then
         notificationLabel.Text = "Quest Complete!\n" .. data.questName .. "\nReward: " .. data.rewards
         notificationLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+        notificationFrame.Visible = true
+        task.delay(5, function()
+            notificationFrame.Visible = false
+        end)
+        
+    elseif data.type == "QuestReady" then
+        local npcData = require(ReplicatedStorage:WaitForChild("GameData")):GetNPC(data.npcName)
+        local npcName = npcData and npcData.name or data.npcName
+        notificationLabel.Text = "Quest Selesai: " .. data.questName .. "\nKembali ke " .. npcName .. " untuk ambil reward!"
+        notificationLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
         notificationFrame.Visible = true
         task.delay(5, function()
             notificationFrame.Visible = false

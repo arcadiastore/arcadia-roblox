@@ -151,6 +151,14 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
                 if complete then
                     quest.readyToComplete = true
                     print("[Server] Quest ready to turn in: " .. questId)
+                    
+                    -- Notify player to return to NPC
+                    UpdateEvent:FireClient(player, {
+                        type = "QuestReady",
+                        questId = questId,
+                        questName = questData.name,
+                        npcName = questData.giver,  -- NPC yang harus dikunjungi
+                    })
                 end
             end
         end
