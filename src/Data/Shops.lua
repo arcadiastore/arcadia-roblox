@@ -12,7 +12,6 @@ Shops["general_shop"] = {
         "hp_potion_small",
         "hp_potion_medium",
         "mp_potion_small",
-        "job_change_ticket",
     },
 }
 
