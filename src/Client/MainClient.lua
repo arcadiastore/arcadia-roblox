@@ -277,8 +277,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
         if EquipmentUI:IsOpen() and InventoryUI:IsOpen() then
             InventoryUI:Toggle()
         end
-    elseif input.KeyCode == Enum.KeyCode.I then
-        print("[Client] I pressed")
+    elseif input.KeyCode == Enum.KeyCode.B then
+        print("[Client] B pressed - Inventory")
         InventoryUI:Toggle()
         if InventoryUI:IsOpen() and EquipmentUI:IsOpen() then
             EquipmentUI:Toggle()
