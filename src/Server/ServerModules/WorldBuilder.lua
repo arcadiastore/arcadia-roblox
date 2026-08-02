@@ -94,6 +94,7 @@ function WorldBuilder:SpawnMonsters()
                 
                 -- HP label
                 local hpLabel = Instance.new("TextLabel")
+                hpLabel.Name = "HPLabel"
                 hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
                 hpLabel.Position = UDim2.new(0, 0, 0.5, 0)
                 hpLabel.BackgroundTransparency = 1
