@@ -297,6 +297,8 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
     -- Go to next node
     if selected.next then
         local nextNode = dialogueData[selected.next]
+        print("[Dialogue] Next node: " .. selected.next .. " exists: " .. tostring(nextNode ~= nil))
+        
         if nextNode then
             -- Update state
             playerDialogueState[player.UserId] = {
@@ -315,8 +317,10 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
             
             -- Check if gives quest
             if nextNode.questId then
+                print("[Dialogue] Node has questId: " .. nextNode.questId)
                 local QuestSystem = require(script.Parent.QuestSystem)
                 local questData = GameData:GetQuest(nextNode.questId)
+                print("[Dialogue] QuestData found: " .. tostring(questData ~= nil))
                 
                 if questData then
                     -- Check if can accept
@@ -352,6 +356,7 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                         if canAccept then
                             -- Show quest preview
                             local questPreview = QuestSystem:BuildQuestPreview(questData)
+                            print("[Dialogue] Sending quest preview to client")
                             events.DialogueEvent:FireClient(player, {
                                 type = "Continue",
                                 npcId = npcId,
