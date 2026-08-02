@@ -180,6 +180,11 @@ local function autoQuestLoop()
                 continue
             end
             
+            -- Double-check phase didn't change (e.g. QuestReady)
+            if autoQuestPhase ~= "fighting" then
+                continue
+            end
+            
             -- Find and attack quest monsters
             if not currentTarget or not currentTarget.Parent or (currentTarget:GetAttribute("CurrentHP") or 0) <= 0 then
                 currentTarget = getMonsterByType(autoQuestTarget)
@@ -251,12 +256,12 @@ local function autoQuestLoop()
     stopMoving()
 end
 
--- Auto combat loop (independent)
+-- Auto combat loop (only when auto quest NOT active)
 local function autoCombatLoop()
     while autoCombatEnabled do
-        -- Skip if auto quest is handling combat
-        if autoQuestActive and autoQuestPhase == "fighting" then
-            task.wait(0.5)
+        -- SKIP entirely if auto quest is running (quest loop handles combat)
+        if autoQuestActive then
+            task.wait(1)
             continue
         end
         
@@ -324,9 +329,10 @@ end
 -- Called when server says quest is ready to complete
 function AutoPanel:QuestReady(questId)
     if autoQuestActive and autoQuestId == questId then
-        if autoQuestPhase == "fighting" then
+        if autoQuestPhase == "fighting" or autoQuestPhase == "idle" then
             autoQuestPhase = "walking_to_npc"
             currentTarget = nil
+            stopMoving()  -- Stop immediately
             print("[AutoPanel] Quest ready! Walking to NPC: " .. tostring(autoQuestNPC))
         end
     end
