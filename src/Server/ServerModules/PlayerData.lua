@@ -259,7 +259,7 @@ function PlayerData:AddItem(player, itemId, count, events)
             slot.count = slot.count + canAdd
             count = count - canAdd
             if count <= 0 then
-                self:SendUpdate(player, events)
+                if events then self:SendUpdate(player, events) end
                 return true
             end
         end
@@ -272,7 +272,7 @@ function PlayerData:AddItem(player, itemId, count, events)
         count = count - stackSize
     end
     
-    self:SendUpdate(player, events)
+    if events then self:SendUpdate(player, events) end
     return true
 end
 
@@ -301,7 +301,7 @@ function PlayerData:RemoveItem(player, itemId, count, events)
         end
     end
     
-    self:SendUpdate(player, events)
+    if events then self:SendUpdate(player, events) end
     return true
 end
 

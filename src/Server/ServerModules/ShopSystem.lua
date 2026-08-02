@@ -52,7 +52,7 @@ function ShopSystem:BuyItem(player, data, itemId, events)
     data.gold = data.gold - itemData.price
     
     local PlayerData = require(script.Parent.PlayerData)
-    PlayerData:AddItem(player, itemId, 1, nil)
+    PlayerData:AddItem(player, itemId, 1, events)
     
     print("[Shop] " .. player.Name .. " bought " .. itemId .. " for " .. itemData.price .. "G")
     
