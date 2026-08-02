@@ -59,6 +59,7 @@ local Notification = require(ClientModules:WaitForChild("Notification"))
 local DamagePopup = require(ClientModules:WaitForChild("DamagePopup"))
 local EquipmentUI = require(ClientModules:WaitForChild("EquipmentUI"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
+local AutoPanel = require(ClientModules:WaitForChild("AutoPanel"))
 
 print("[Client] All modules loaded!")
 
@@ -73,6 +74,7 @@ DialogueUI:Create(HUD:GetGUI())
 Notification:Create(HUD:GetGUI())
 EquipmentUI:Create(playerGui)
 InventoryUI:Create(playerGui)
+AutoPanel:Create(playerGui)
 
 print("[Client] All UI created!")
 
