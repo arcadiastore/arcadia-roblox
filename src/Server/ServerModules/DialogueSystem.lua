@@ -67,11 +67,69 @@ function DialogueSystem:Talk(player, data, npcId, events)
             currentNode = "greeting",
         }
         
+        local greeting = dialogueData.greeting
+        local greetingText = type(greeting) == "string" and greeting or (greeting.text or "")
+        local greetingResponses = {}
+        
+        -- If greeting has responses, use them
+        if type(greeting) == "table" and greeting.responses then
+            greetingResponses = greeting.responses
+        else
+            -- Add context-aware responses based on NPC type
+            if npcData and npcData.hasQuest then
+                -- Check if player has quest ready
+                local hasReadyQuest = false
+                for questId, quest in pairs(data.activeQuests or {}) do
+                    local qData = GameData:GetQuest(questId)
+                    if qData and qData.giver == npcId then
+                        local allDone = true
+                        for i, obj in ipairs(qData.objectives) do
+                            if (quest.progress[i] or 0) < obj.count then
+                                allDone = false
+                                break
+                            end
+                        end
+                        if allDone or quest.readyToComplete then
+                            hasReadyQuest = true
+                            break
+                        end
+                    end
+                end
+                
+                if hasReadyQuest then
+                    table.insert(greetingResponses, {text = "Saya sudah menyelesaikan tugasnya!", next = "quest_complete"})
+                end
+                
+                -- Check if NPC has quest to offer
+                local hasQuestToOffer = false
+                for questId, qData in pairs(GameData.Quests or {}) do
+                    if qData.giver == npcId and not data.activeQuests[questId] and not data.completedQuests[questId] then
+                        hasQuestToOffer = true
+                        break
+                    end
+                end
+                
+                if hasQuestToOffer then
+                    table.insert(greetingResponses, {text = "Ada tugas untuk saya?", next = "quest_offer"})
+                end
+            end
+            
+            if npcData and npcData.hasShop then
+                table.insert(greetingResponses, {text = "Saya mau lihat daganganmu.", next = "shop"})
+            end
+            
+            -- Always add exit
+            table.insert(greetingResponses, {text = "Sampai jumpa!", next = nil})
+        end
+        
         events.DialogueEvent:FireClient(player, {
             type = "Start",
             npcId = npcId,
             npcName = npcData and npcData.name or npcId,
-            dialogue = dialogueData.greeting,
+            dialogue = {
+                text = greetingText,
+                responses = greetingResponses,
+            },
         })
         
         print("[Dialogue] " .. player.Name .. " talked to " .. npcId)
@@ -96,6 +154,93 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
         end
         playerDialogueState[player.UserId] = nil
         events.DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+        return true
+    end
+    
+    -- Handle quest_complete triggered from greeting
+    if responseText == "Saya sudah menyelesaikan tugasnya!" or responseText == "Saya sudah menyelesaikan tugasnya!" then
+        -- Find ready quest for this NPC
+        local QuestSystem = require(script.Parent.QuestSystem)
+        local readyQuestId = QuestSystem:GetReadyQuest(data, npcId)
+        if readyQuestId then
+            state.currentNode = "quest_complete"
+            state.questId = readyQuestId
+            local readyQuestData = GameData:GetQuest(readyQuestId)
+            events.DialogueEvent:FireClient(player, {
+                type = "Continue",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = "Bagus sekali! Kau telah menyelesaikan tugasmu! Terimalah hadiah ini!",
+                    responses = {
+                        {text = "Terima kasih! (Ambil Reward)", next = "complete"},
+                        {text = "Nanti saja.", next = nil},
+                    },
+                },
+            })
+        end
+        return true
+    end
+    
+    -- Handle "Ada tugas untuk saya?" from greeting
+    if responseText == "Ada tugas untuk saya?" then
+        -- Find quest to offer
+        local questToOffer = nil
+        for questId, qData in pairs(GameData.Quests or {}) do
+            if qData.giver == npcId and not data.activeQuests[questId] and not data.completedQuests[questId] then
+                questToOffer = {id = questId, data = qData}
+                break
+            end
+        end
+        
+        if questToOffer then
+            local q = questToOffer.data
+            local rewardText = ""
+            if q.rewards then
+                local parts = {}
+                if q.rewards.exp and q.rewards.exp > 0 then table.insert(parts, q.rewards.exp .. " EXP") end
+                if q.rewards.gold and q.rewards.gold > 0 then table.insert(parts, q.rewards.gold .. " Gold") end
+                rewardText = table.concat(parts, ", ")
+            end
+            
+            local objText = ""
+            if q.objectives then
+                for _, obj in ipairs(q.objectives) do
+                    objText = objText .. "\n  - " .. obj.description .. ": 0/" .. obj.count
+                end
+            end
+            
+            local preview = q.name .. "\n\n" .. q.description
+            if objText ~= "" then preview = preview .. "\n\nObjektif:" .. objText end
+            if rewardText ~= "" then preview = preview .. "\n\nReward: " .. rewardText end
+            
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "quest_offer",
+                questId = questToOffer.id,
+            }
+            
+            events.DialogueEvent:FireClient(player, {
+                type = "Continue",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = preview,
+                    responses = {
+                        {text = "✓ Saya terima quest ini!", next = "accept"},
+                        {text = "✗ Nanti saja, saya belum siap.", next = nil},
+                    },
+                },
+            })
+        end
+        return true
+    end
+    
+    -- Handle "Saya mau lihat daganganmu." from greeting
+    if responseText == "Saya mau lihat daganganmu." then
+        local ShopSystem = require(script.Parent.ShopSystem)
+        ShopSystem:OpenShop(player, data, npcId, events)
+        playerDialogueState[player.UserId] = nil
         return true
     end
     

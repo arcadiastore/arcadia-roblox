@@ -124,45 +124,63 @@ end)
 print("[Client] Dialogue handler ready!")
 
 -- ============================================
--- NPC INTERACTION
+-- NPC INTERACTION (Dynamic - watches for new NPCs)
 -- ============================================
 
+local function connectNPC(npc)
+    local click = npc:FindFirstChild("ClickDetector")
+    if click then
+        click.MouseClick:Connect(function()
+            local npcId = npc:GetAttribute("NPCId") or npc.Name
+            DialogueEvent:FireServer("talk", {npcId = npcId})
+        end)
+    end
+end
+
 task.spawn(function()
-    task.wait(5)
-    
-    local npcFolder = workspace:FindFirstChild("NPCs")
+    local npcFolder = workspace:WaitForChild("NPCs", 30)
     if npcFolder then
+        -- Connect existing NPCs
         for _, npc in ipairs(npcFolder:GetChildren()) do
-            local click = npc:FindFirstChild("ClickDetector")
-            if click then
-                click.MouseClick:Connect(function()
-                    local npcId = npc:GetAttribute("NPCId") or npc.Name
-                    DialogueEvent:FireServer("talk", {npcId = npcId})
-                end)
-            end
+            connectNPC(npc)
         end
+        -- Connect new NPCs as they spawn
+        npcFolder.ChildAdded:Connect(function(npc)
+            connectNPC(npc)
+        end)
         print("[Client] NPC interactions connected!")
+    else
+        warn("[Client] NPCs folder not found!")
     end
 end)
 
 -- ============================================
--- MONSTER INTERACTION
+-- MONSTER INTERACTION (Dynamic - watches for new monsters)
 -- ============================================
 
+local function connectMonster(monster)
+    local click = monster:FindFirstChild("ClickDetector")
+    if click then
+        click.MouseClick:Connect(function()
+            AttackEvent:FireServer(monster)
+        end)
+    end
+end
+
 task.spawn(function()
-    task.wait(5)
-    
-    local monsterFolder = workspace:FindFirstChild("Monsters")
+    local monsterFolder = workspace:WaitForChild("Monsters", 30)
     if monsterFolder then
+        -- Connect existing monsters
         for _, monster in ipairs(monsterFolder:GetChildren()) do
-            local click = monster:FindFirstChild("ClickDetector")
-            if click then
-                click.MouseClick:Connect(function()
-                    AttackEvent:FireServer(monster)
-                end)
-            end
+            connectMonster(monster)
         end
+        -- Connect new monsters as they spawn (respawn)
+        monsterFolder.ChildAdded:Connect(function(monster)
+            connectMonster(monster)
+        end)
         print("[Client] Monster interactions connected!")
+    else
+        warn("[Client] Monsters folder not found!")
     end
 end)
 
