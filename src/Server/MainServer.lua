@@ -432,6 +432,33 @@ local function completeQuest(player, pData, questId, questData)
     })
 end
 
+-- Helper: Build quest preview text
+local function buildQuestPreview(questData)
+    local preview = ""
+    preview = preview .. "━━━━━━━━━━━━━━━━━━━━\n"
+    preview = preview .. "📜 Quest: " .. questData.name .. "\n"
+    preview = preview .. "━━━━━━━━━━━━━━━━━━━━\n"
+    preview = preview .. "📋 Objektif:\n"
+    for _, obj in ipairs(questData.objectives) do
+        preview = preview .. "  • " .. obj.description .. "\n"
+    end
+    preview = preview .. "━━━━━━━━━━━━━━━━━━━━\n"
+    preview = preview .. "🎁 Reward:\n"
+    if questData.rewards.exp then
+        preview = preview .. "  • +" .. questData.rewards.exp .. " EXP\n"
+    end
+    if questData.rewards.gold then
+        preview = preview .. "  • +" .. questData.rewards.gold .. " Gold\n"
+    end
+    if questData.rewards.items then
+        for _, item in ipairs(questData.rewards.items) do
+            preview = preview .. "  • " .. item.itemId .. " x" .. item.count .. "\n"
+        end
+    end
+    preview = preview .. "━━━━━━━━━━━━━━━━━━━━"
+    return preview
+end
+
 DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     local pData = playerData[player.UserId]
     if not pData then return end
@@ -574,19 +601,95 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                         end
                         
                         if canAccept then
-                            pData.activeQuests[nextNode.questId] = {
-                                id = nextNode.questId,
+                            -- SHOW QUEST PREVIEW - Player must choose!
+                            local questPreview = buildQuestPreview(questData)
+                            
+                            -- Update state to track quest node
+                            playerDialogueState[player.UserId] = {
+                                npcId = npcId,
+                                currentNode = selected.next,  -- Keep track of quest node
+                            }
+                            
+                            DialogueEvent:FireClient(player, {
+                                type = "Continue",
+                                npcId = npcId,
+                                npcName = npcData and npcData.name or npcId,
+                                dialogue = {
+                                    text = nextNode.text .. "\n\n" .. questPreview,
+                                    questId = nextNode.questId,
+                                    responses = {
+                                        {text = "✓ Saya terima quest ini!", next = "accept_quest"},
+                                        {text = "✗ Nanti saja, saya belum siap.", next = nil},
+                                    },
+                                },
+                            })
+                            return
+                        end
+                    end
+                    
+                    -- Quest already active or completed - show status
+                    if pData.activeQuests[nextNode.questId] then
+                        local quest = pData.activeQuests[nextNode.questId]
+                        local questInfo = GameData:GetQuest(nextNode.questId)
+                        local statusText = "Kamu masih dalam quest: " .. questInfo.name .. "\n\n"
+                        for i, obj in ipairs(questInfo.objectives) do
+                            local prog = quest.progress[i] or 0
+                            local done = prog >= obj.count
+                            local status = done and "✓" or ">"
+                            statusText = statusText .. status .. " " .. obj.description .. ": " .. prog .. "/" .. obj.count .. "\n"
+                        end
+                        
+                        DialogueEvent:FireClient(player, {
+                            type = "Continue",
+                            npcId = npcId,
+                            npcName = npcData and npcData.name or npcId,
+                            dialogue = {
+                                text = statusText,
+                                responses = {
+                                    {text = "Baik, saya akan menyelesaikannya!", next = nil},
+                                },
+                            },
+                        })
+                    else
+                        DialogueEvent:FireClient(player, {
+                            type = "Continue",
+                            npcId = npcId,
+                            npcName = npcData and npcData.name or npcId,
+                            dialogue = {
+                                text = "Kau sudah menyelesaikan quest itu. Terima kasih!",
+                                responses = {
+                                    {text = "Sama-sama!", next = nil},
+                                },
+                            },
+                        })
+                    end
+                    return
+                end
+                
+                -- Handle quest acceptance
+                if selected.next == "accept_quest" then
+                    -- Find quest from current node
+                    local currentState = playerDialogueState[player.UserId]
+                    local questNodeId = currentState.currentNode
+                    local questNode = dialogueData[questNodeId]
+                    
+                    if questNode and questNode.questId then
+                        local questData = GameData:GetQuest(questNode.questId)
+                        if questData then
+                            -- Accept quest
+                            pData.activeQuests[questNode.questId] = {
+                                id = questNode.questId,
                                 progress = {},
                                 readyToComplete = false,
                             }
                             for i, obj in ipairs(questData.objectives) do
-                                pData.activeQuests[nextNode.questId].progress[i] = 0
+                                pData.activeQuests[questNode.questId].progress[i] = 0
                             end
-                            print("[Server] " .. player.Name .. " accepted quest: " .. nextNode.questId)
+                            print("[Server] " .. player.Name .. " accepted quest: " .. questNode.questId)
                             
                             UpdateEvent:FireClient(player, {
                                 type = "QuestAccepted",
-                                questId = nextNode.questId,
+                                questId = questNode.questId,
                                 questName = questData.name,
                             })
                             
@@ -614,7 +717,7 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                 DialogueEvent:FireClient(player, {
                     type = "Continue",
                     npcId = npcId,
-                    npcName = GameData:GetNPC(npcId) and GameData:GetNPC(npcId).name or npcId,
+                    npcName = npcData and npcData.name or npcId,
                     dialogue = nextNode,
                 })
             else
