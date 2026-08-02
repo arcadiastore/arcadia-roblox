@@ -25,7 +25,7 @@ local autoQuestId = nil  -- current quest ID
 
 local ATTACK_RANGE = 30  -- Find monsters within this range
 local MELEE_RANGE = 8    -- Default fist range (overridden by weapon)
-local NPC_INTERACT_RANGE = 20
+local NPC_INTERACT_RANGE = 10  -- Must be close to talk to NPC
 
 -- Current weapon range (updated from server)
 local currentWeaponRange = 8
