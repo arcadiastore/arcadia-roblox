@@ -523,18 +523,26 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             return
         end
         
-        -- Handle quest completion
+        -- Handle quest completion - CHECK RESPONSE FIRST!
         if state.currentNode == "quest_complete" and state.questId then
-            -- Complete the quest
-            local questData = GameData:GetQuest(state.questId)
-            if questData then
-                completeQuest(player, pData, state.questId, questData)
+            -- Check if player clicked "Ambil Reward"
+            if responseText == "Terima kasih! (Ambil Reward)" or responseText == "Ambil Reward" then
+                -- Complete the quest
+                local questData = GameData:GetQuest(state.questId)
+                if questData then
+                    completeQuest(player, pData, state.questId, questData)
+                end
+                
+                -- End dialogue
+                playerDialogueState[player.UserId] = nil
+                DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+                return
+            else
+                -- Player declined or clicked "Nanti saja"
+                playerDialogueState[player.UserId] = nil
+                DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+                return
             end
-            
-            -- End dialogue
-            playerDialogueState[player.UserId] = nil
-            DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
-            return
         end
         
         -- Normal dialogue flow
@@ -590,8 +598,17 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             return
         end
         
-        if responseText == "✗ Nanti saja, saya belum siap." or responseText == "Nanti saja, saya belum siap." or responseText == "Nanti saja." then
-            -- Decline quest
+        -- Handle decline/exit responses
+        if responseText == "✗ Nanti saja, saya belum siap." 
+            or responseText == "Nanti saja, saya belum siap." 
+            or responseText == "Nanti saja."
+            or responseText == "Sama-sama!"
+            or responseText == "Baik, saya akan menyelesaikannya!"
+            or responseText == "Saya akan kembali nanti."
+            or responseText == "Terima kasih!"
+            or responseText == "Saya akan pergi!"
+            or responseText == "Baik, saya akan pergi!" then
+            -- End dialogue
             playerDialogueState[player.UserId] = nil
             DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
             return
