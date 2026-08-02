@@ -65,11 +65,14 @@ function PlayerData:SendUpdate(player, events)
     local data = playerDataStore[player.UserId]
     if not data then return end
     
+    local expNeeded = GameData:CalculateExpForLevel(data.level + 1)
+    
     events.UpdateEvent:FireClient(player, {
         type = "Update",
         job = data.job,
         level = data.level,
         exp = data.exp,
+        expNeeded = expNeeded,
         gold = data.gold,
         hp = data.hp,
         maxHp = data.maxHp,
