@@ -38,14 +38,16 @@ function ShopSystem:BuyItem(player, data, itemId, events)
     end
     
     -- Check gold
-    if data.gold < itemData.price then
+    if data.gold < (itemData.price or 0) then
         events.ShopEvent:FireClient(player, {type = "Error", message = "Gold tidak cukup!"})
         return false
     end
     
     -- Buy
     data.gold = data.gold - itemData.price
-    data.inventory[itemId] = (data.inventory[itemId] or 0) + 1
+    
+    local PlayerData = require(script.Parent.PlayerData)
+    PlayerData:AddItem(player, itemId, 1, nil)
     
     print("[Shop] " .. player.Name .. " bought " .. itemId .. " for " .. itemData.price .. "G")
     
@@ -59,7 +61,6 @@ function ShopSystem:BuyItem(player, data, itemId, events)
     })
     
     -- Update client
-    local PlayerData = require(script.Parent.PlayerData)
     PlayerData:SendUpdate(player, events)
     
     return true

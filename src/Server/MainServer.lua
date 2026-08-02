@@ -62,6 +62,8 @@ local ShopEvent = makeEvent("ShopEvent")
 local QuestEvent = makeEvent("QuestEvent")
 local DialogueEvent = makeEvent("DialogueEvent")
 local UpdateEvent = makeEvent("UpdateEvent")
+local EquipEvent = makeEvent("EquipEvent")
+local InventoryEvent = makeEvent("InventoryEvent")
 
 -- Events table for modules
 local events = {
@@ -70,6 +72,8 @@ local events = {
     QuestEvent = QuestEvent,
     DialogueEvent = DialogueEvent,
     UpdateEvent = UpdateEvent,
+    EquipEvent = EquipEvent,
+    InventoryEvent = InventoryEvent,
 }
 
 print("[Server] Events created!")
@@ -171,6 +175,63 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     elseif action == "respond" then
         local result = DialogueSystem:Respond(player, pData, data.npcId, data.responseText, events)
         print("[Server] Respond result: " .. tostring(result))
+    end
+end)
+
+-- Equipment
+EquipEvent.OnServerEvent:Connect(function(player, action, data)
+    local pData = PlayerData:Get(player)
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then return end
+    
+    if action == "equip" then
+        local success, msg = PlayerData:EquipItem(player, data.itemId, data.slot, events)
+        if not success then
+            EquipEvent:FireClient(player, {type = "Error", message = msg})
+        else
+            EquipEvent:FireClient(player, {type = "Success", message = msg})
+        end
+    elseif action == "unequip" then
+        local success, msg = PlayerData:UnequipItem(player, data.slot, events)
+        if not success then
+            EquipEvent:FireClient(player, {type = "Error", message = msg})
+        else
+            EquipEvent:FireClient(player, {type = "Success", message = msg})
+        end
+    end
+end)
+
+-- Inventory (use consumable)
+InventoryEvent.OnServerEvent:Connect(function(player, action, data)
+    local pData = PlayerData:Get(player)
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then return end
+    
+    if action == "use" then
+        local itemId = data.itemId
+        local itemData = GameData.Items and GameData.Items[itemId]
+        if not itemData then return end
+        
+        if itemData.type == "consumable" then
+            if PlayerData:HasItem(player, itemId, 1) then
+                -- Apply effect
+                if itemData.effect then
+                    if itemData.effect.stat == "hp" then
+                        pData.hp = math.min(pData.hp + itemData.effect.value, pData.maxHp)
+                    elseif itemData.effect.stat == "mp" then
+                        pData.mp = math.min((pData.mp or 0) + itemData.effect.value, pData.maxMp or 50)
+                    end
+                end
+                PlayerData:RemoveItem(player, itemId, 1, events)
+                InventoryEvent:FireClient(player, {type = "Used", itemName = itemData.name})
+            end
+        end
     end
 end)
 

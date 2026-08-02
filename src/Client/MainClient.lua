@@ -40,6 +40,8 @@ local ShopEvent = Events:WaitForChild("ShopEvent")
 local QuestEvent = Events:WaitForChild("QuestEvent")
 local DialogueEvent = Events:WaitForChild("DialogueEvent")
 local UpdateEvent = Events:WaitForChild("UpdateEvent")
+local EquipEvent = Events:WaitForChild("EquipEvent")
+local InventoryEvent = Events:WaitForChild("InventoryEvent")
 
 print("[Client] Events found!")
 
@@ -55,6 +57,8 @@ local ShopUI = require(ClientModules:WaitForChild("ShopUI"))
 local DialogueUI = require(ClientModules:WaitForChild("DialogueUI"))
 local Notification = require(ClientModules:WaitForChild("Notification"))
 local DamagePopup = require(ClientModules:WaitForChild("DamagePopup"))
+local EquipmentUI = require(ClientModules:WaitForChild("EquipmentUI"))
+local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 
 print("[Client] All modules loaded!")
 
@@ -67,6 +71,8 @@ QuestTracker:Create(HUD:GetGUI())
 ShopUI:Create(HUD:GetGUI())
 DialogueUI:Create(HUD:GetGUI())
 Notification:Create(HUD:GetGUI())
+EquipmentUI:Create(HUD:GetGUI())
+InventoryUI:Create(HUD:GetGUI())
 
 print("[Client] All UI created!")
 
@@ -117,6 +123,8 @@ UpdateEvent.OnClientEvent:Connect(function(data)
     elseif data.type == "Update" then
         HUD:Update(data)
         QuestTracker:Update(data)
+        EquipmentUI:Update(data)
+        InventoryUI:Update(data)
         
     elseif data.type == "QuestAccepted" then
         Notification:QuestAccepted(data.questName)
@@ -239,6 +247,42 @@ task.spawn(function()
         warn("[Client] Monsters folder not found!")
     end
 end)
+
+-- Equipment event handler
+EquipEvent.OnClientEvent:Connect(function(data)
+    if data.type == "Success" then
+        Notification:Show(data.message or "Equipment updated!", Color3.fromRGB(100, 255, 100))
+    elseif data.type == "Error" then
+        Notification:Show(data.message or "Equipment error!", Color3.fromRGB(255, 100, 100))
+    end
+end)
+
+-- Inventory event handler
+InventoryEvent.OnClientEvent:Connect(function(data)
+    if data.type == "Used" then
+        Notification:Show("Used: " .. (data.itemName or "item"), Color3.fromRGB(100, 200, 255))
+    end
+end)
+
+-- Keyboard shortcuts
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    
+    if input.KeyCode == Enum.KeyCode.E then
+        EquipmentUI:Toggle()
+        if EquipmentUI:IsOpen() and InventoryUI:IsOpen() then
+            InventoryUI:Toggle()
+        end
+    elseif input.KeyCode == Enum.KeyCode.I then
+        InventoryUI:Toggle()
+        if InventoryUI:IsOpen() and EquipmentUI:IsOpen() then
+            EquipmentUI:Toggle()
+        end
+    end
+end)
+
+print("[Client] Equipment & Inventory connected!")
 
 print("[Client] ==========================================")
 print("[Client] Arcadia Online Client READY!")

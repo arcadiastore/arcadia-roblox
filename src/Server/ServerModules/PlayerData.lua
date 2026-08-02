@@ -13,7 +13,7 @@ local playerDataStore = {}
 -- Default player data
 function PlayerData:GetDefault()
     return {
-        job = nil,  -- Not selected yet
+        job = nil,
         level = 1,
         exp = 0,
         gold = 100,
@@ -30,12 +30,20 @@ function PlayerData:GetDefault()
         skillPoints = 0,
         learnedSkills = {},
         inventory = {
-            hp_potion_small = 5,
+            {itemId = "hp_potion_small", count = 5},
         },
         equipment = {
-            weapon = nil,
-            armor = nil,
-            accessory = nil,
+            hat = nil,
+            tshirt = nil,
+            pants = nil,
+            shoes = nil,
+            ringLeft = nil,
+            ringRight = nil,
+            necklace = nil,
+            weapon1h = nil,
+            weapon2h = nil,
+            wings = nil,
+            costume = nil,
         },
         activeQuests = {},
         completedQuests = {},
@@ -84,6 +92,8 @@ function PlayerData:SendUpdate(player, events)
         mdef = data.mdef or 5,
         spd = data.spd or 10,
         luk = data.luk or 5,
+        inventory = data.inventory,
+        equipment = data.equipment,
         activeQuests = data.activeQuests,
         completedQuests = data.completedQuests,
     })
@@ -226,6 +236,215 @@ function PlayerData:SetJob(player, jobId, events)
     
     print("[PlayerData] " .. player.Name .. " selected job: " .. jobId)
     return true, "Job berhasil dipilih: " .. jobId
+end
+
+-- ============================================
+-- INVENTORY MANAGEMENT
+-- ============================================
+
+-- Add item to inventory
+function PlayerData:AddItem(player, itemId, count, events)
+    local data = self:Get(player)
+    if not data then return false end
+    
+    count = count or 1
+    local itemData = GameData.Items and GameData.Items[itemId]
+    if not itemData then return false end
+    
+    -- Find existing stack
+    local maxStack = itemData.maxStack or 99
+    for _, slot in ipairs(data.inventory) do
+        if slot.itemId == itemId and slot.count < maxStack then
+            local canAdd = math.min(count, maxStack - slot.count)
+            slot.count = slot.count + canAdd
+            count = count - canAdd
+            if count <= 0 then
+                self:SendUpdate(player, events)
+                return true
+            end
+        end
+    end
+    
+    -- Create new slot(s)
+    while count > 0 do
+        local stackSize = math.min(count, maxStack)
+        table.insert(data.inventory, {itemId = itemId, count = stackSize})
+        count = count - stackSize
+    end
+    
+    self:SendUpdate(player, events)
+    return true
+end
+
+-- Remove item from inventory
+function PlayerData:RemoveItem(player, itemId, count, events)
+    local data = self:Get(player)
+    if not data then return false end
+    
+    count = count or 1
+    
+    -- Check if enough
+    local total = self:GetItemCount(player, itemId)
+    if total < count then return false end
+    
+    -- Remove from end
+    for i = #data.inventory, 1, -1 do
+        local slot = data.inventory[i]
+        if slot.itemId == itemId then
+            local canRemove = math.min(count, slot.count)
+            slot.count = slot.count - canRemove
+            count = count - canRemove
+            if slot.count <= 0 then
+                table.remove(data.inventory, i)
+            end
+            if count <= 0 then break end
+        end
+    end
+    
+    self:SendUpdate(player, events)
+    return true
+end
+
+-- Get total count of item
+function PlayerData:GetItemCount(player, itemId)
+    local data = self:Get(player)
+    if not data then return 0 end
+    
+    local total = 0
+    for _, slot in ipairs(data.inventory) do
+        if slot.itemId == itemId then
+            total = total + slot.count
+        end
+    end
+    return total
+end
+
+-- Check if player has item
+function PlayerData:HasItem(player, itemId, count)
+    return self:GetItemCount(player, itemId) >= (count or 1)
+end
+
+-- ============================================
+-- EQUIPMENT MANAGEMENT
+-- ============================================
+
+-- Get equipment slot for item
+local function getEquipSlot(itemData)
+    if not itemData or itemData.type ~= "equipment" then return nil end
+    local slot = itemData.slot
+    if slot == "weapon1h" then return "weapon1h"
+    elseif slot == "weapon2h" then return "weapon2h"
+    elseif slot == "hat" then return "hat"
+    elseif slot == "tshirt" then return "tshirt"
+    elseif slot == "pants" then return "pants"
+    elseif slot == "shoes" then return "shoes"
+    elseif slot == "ring" then return "ringLeft"  -- default to left
+    elseif slot == "necklace" then return "necklace"
+    elseif slot == "wings" then return "wings"
+    elseif slot == "costume" then return "costume"
+    end
+    return nil
+end
+
+-- Equip item
+function PlayerData:EquipItem(player, itemId, targetSlot, events)
+    local data = self:Get(player)
+    if not data then return false, "Player data not found" end
+    
+    local itemData = GameData.Items and GameData.Items[itemId]
+    if not itemData then return false, "Item tidak ditemukan!" end
+    if itemData.type ~= "equipment" then return false, "Item bukan equipment!" end
+    
+    -- Check level requirement
+    if itemData.levelReq and data.level < itemData.levelReq then
+        return false, "Level kurang! Butuh Lv." .. itemData.levelReq
+    end
+    
+    -- Check job requirement
+    if itemData.jobReq and data.job then
+        local allowed = false
+        for _, job in ipairs(itemData.jobReq) do
+            if job == data.job then allowed = true break end
+        end
+        if not allowed then
+            return false, "Job " .. data.job .. " tidak bisa pakai item ini!"
+        end
+    end
+    
+    -- Determine equipment slot
+    local equipSlot = targetSlot or getEquipSlot(itemData)
+    if not equipSlot then return false, "Slot equipment tidak valid!" end
+    
+    -- Handle ring slots
+    if itemData.slot == "ring" then
+        if targetSlot == "ringRight" then
+            equipSlot = "ringRight"
+        else
+            -- Auto: prefer empty slot, then left
+            if not data.equipment.ringLeft then
+                equipSlot = "ringLeft"
+            elseif not data.equipment.ringRight then
+                equipSlot = "ringRight"
+            else
+                equipSlot = targetSlot or "ringLeft"
+            end
+        end
+    end
+    
+    -- Handle 1h/2h weapon conflict
+    if equipSlot == "weapon2h" then
+        -- Unequip weapon1h if exists
+        if data.equipment.weapon1h then
+            self:AddItem(player, data.equipment.weapon1h, 1, nil)
+            data.equipment.weapon1h = nil
+        end
+    elseif equipSlot == "weapon1h" then
+        -- Unequip weapon2h if exists
+        if data.equipment.weapon2h then
+            self:AddItem(player, data.equipment.weapon2h, 1, nil)
+            data.equipment.weapon2h = nil
+        end
+    end
+    
+    -- Unequip current item in slot
+    local currentItem = data.equipment[equipSlot]
+    if currentItem then
+        self:AddItem(player, currentItem, 1, nil)
+    end
+    
+    -- Remove new item from inventory and equip
+    if not self:RemoveItem(player, itemId, 1, nil) then
+        return false, "Item tidak ada di inventory!"
+    end
+    
+    data.equipment[equipSlot] = itemId
+    
+    -- Recalculate stats
+    self:UpdateMaxStats(player)
+    self:SendUpdate(player, events)
+    
+    print("[PlayerData] " .. player.Name .. " equipped " .. itemId .. " to " .. equipSlot)
+    return true, "Berhasil equip " .. itemData.name .. "!"
+end
+
+-- Unequip item
+function PlayerData:UnequipItem(player, slot, events)
+    local data = self:Get(player)
+    if not data then return false, "Player data not found" end
+    
+    local itemId = data.equipment[slot]
+    if not itemId then return false, "Tidak ada item di slot " .. slot end
+    
+    -- Add back to inventory
+    self:AddItem(player, itemId, 1, nil)
+    data.equipment[slot] = nil
+    
+    -- Recalculate stats
+    self:UpdateMaxStats(player)
+    self:SendUpdate(player, events)
+    
+    print("[PlayerData] " .. player.Name .. " unequipped " .. itemId .. " from " .. slot)
+    return true, "Berhasil unequip!"
 end
 
 return PlayerData
