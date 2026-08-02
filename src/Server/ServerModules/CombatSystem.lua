@@ -16,6 +16,19 @@ function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
         return
     end
     
+    -- MELEE RANGE CHECK - must be close to attack
+    local character = player.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local MELEE_RANGE = 12  -- studs
+    local dist = (monsterPart.Position - rootPart.Position).Magnitude
+    if dist > MELEE_RANGE then
+        -- Too far, reject attack
+        return
+    end
+    
     local monsterId = monsterPart:GetAttribute("MonsterId")
     print("[Combat] MonsterId: " .. tostring(monsterId))
     

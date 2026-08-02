@@ -23,8 +23,9 @@ local autoQuestTarget = nil  -- monster type to kill
 local autoQuestNPC = nil  -- NPC to report to
 local autoQuestId = nil  -- current quest ID
 
-local ATTACK_RANGE = 30
-local NPC_INTERACT_RANGE = 20  -- Increased from 12
+local ATTACK_RANGE = 30  -- Find monsters within this range
+local MELEE_RANGE = 12   -- Must be this close to attack
+local NPC_INTERACT_RANGE = 20
 
 -- Get GameData
 local function getGameData()
@@ -190,7 +191,7 @@ local function autoQuestLoop()
             
             if currentTarget then
                 local dist = getDistTo(currentTarget.Position)
-                if dist <= 15 then
+                if dist <= MELEE_RANGE then
                     stopMoving()
                     local AttackEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AttackEvent")
                     if AttackEvent then
@@ -282,7 +283,7 @@ local function autoCombatLoop()
                 local humanoid = character:FindFirstChild("Humanoid")
                 if rootPart and humanoid then
                     local dist = (currentTarget.Position - rootPart.Position).Magnitude
-                    if dist <= 15 then
+                    if dist <= MELEE_RANGE then
                         stopMoving()
                         local AttackEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AttackEvent")
                         if AttackEvent then
