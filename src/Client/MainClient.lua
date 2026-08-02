@@ -71,8 +71,8 @@ QuestTracker:Create(HUD:GetGUI())
 ShopUI:Create(HUD:GetGUI())
 DialogueUI:Create(HUD:GetGUI())
 Notification:Create(HUD:GetGUI())
-EquipmentUI:Create(HUD:GetGUI())
-InventoryUI:Create(HUD:GetGUI())
+EquipmentUI:Create(playerGui)
+InventoryUI:Create(playerGui)
 
 print("[Client] All UI created!")
 
