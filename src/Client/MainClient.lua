@@ -16,10 +16,19 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 print("[Client] Client starting...")
 
--- Wait for Events
-local Events = ReplicatedStorage:WaitForChild("Events", 10)
+-- Wait for Events (server creates these)
+local Events = nil
+for i = 1, 30 do  -- Try for 30 seconds
+    Events = ReplicatedStorage:FindFirstChild("Events")
+    if Events then break end
+    task.wait(1)
+    if i % 5 == 0 then
+        print("[Client] Waiting for Events... " .. i .. "s")
+    end
+end
+
 if not Events then
-    warn("[Client] Events not found!")
+    warn("[Client] Events not found after 30 seconds! Server may have error.")
     return
 end
 

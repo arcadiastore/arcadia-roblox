@@ -17,7 +17,15 @@ print("[Server] ==========================================")
 
 -- Wait for GameData
 task.wait(2)
-local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
+local success, GameData = pcall(function()
+    return require(ReplicatedStorage:WaitForChild("GameData"))
+end)
+
+if not success or not GameData then
+    warn("[Server] Failed to load GameData! Using empty module.")
+    GameData = {}
+end
+
 print("[Server] GameData loaded!")
 
 -- ============================================
