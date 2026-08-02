@@ -77,12 +77,18 @@ print("[Client] All UI created!")
 -- Update handler
 UpdateEvent.OnClientEvent:Connect(function(data)
     if data.type == "Damage" then
+        print("[Client] Damage received: " .. data.damage .. " to " .. tostring(data.target))
+        print("[Client] monsterPart: " .. tostring(data.monsterPart))
+        print("[Client] currentHP: " .. tostring(data.currentHP) .. " / maxHP: " .. tostring(data.maxHP))
+        
         -- Show damage popup at monster position
         if data.monsterPart then
             DamagePopup:Show(data.monsterPart, data.damage, {
                 currentHP = data.currentHP,
                 maxHP = data.maxHP,
             })
+        else
+            warn("[Client] monsterPart is nil!")
         end
         
     elseif data.type == "Update" then

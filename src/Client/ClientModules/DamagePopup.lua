@@ -7,15 +7,23 @@ local DamagePopup = {}
 
 -- Show damage number at monster position
 function DamagePopup:Show(monsterPart, damage, hpData)
-    if not monsterPart or not monsterPart.Parent then return end
+    if not monsterPart or not monsterPart.Parent then
+        warn("[DamagePopup] monsterPart is nil or destroyed!")
+        return
+    end
+    
+    print("[DamagePopup] Showing on: " .. monsterPart.Name .. " children: " .. #monsterPart:GetChildren())
     
     -- Update HP bar on monster (client-side)
     if hpData then
         local billboard = monsterPart:FindFirstChild("BillboardGui")
+        print("[DamagePopup] BillboardGui: " .. tostring(billboard))
         if billboard then
             local hpLabel = billboard:FindFirstChild("HPLabel")
+            print("[DamagePopup] HPLabel: " .. tostring(hpLabel))
             if hpLabel then
                 hpLabel.Text = "HP: " .. hpData.currentHP .. "/" .. hpData.maxHP
+                print("[DamagePopup] HP label updated to: " .. hpLabel.Text)
                 local pct = hpData.currentHP / hpData.maxHP
                 if pct > 0.5 then
                     hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
