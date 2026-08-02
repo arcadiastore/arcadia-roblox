@@ -22,7 +22,7 @@ local autoQuestTarget = nil  -- monster type to kill
 local ATTACK_RANGE = 30
 local ATTACK_INTERVAL = 0.8
 
--- Get specific monster by type
+-- Get specific monster by type (no range limit for quest)
 local function getMonsterByType(monsterType)
     local character = player.Character
     if not character then return nil end
@@ -33,7 +33,7 @@ local function getMonsterByType(monsterType)
     if not monsterFolder then return nil end
     
     local nearest = nil
-    local nearestDist = ATTACK_RANGE
+    local nearestDist = math.huge  -- No range limit for quest targets
     
     for _, monster in ipairs(monsterFolder:GetChildren()) do
         local hp = monster:GetAttribute("CurrentHP") or 0
