@@ -125,7 +125,7 @@ function QuestTracker:Update(data)
                     
                     objBtn.MouseButton1Click:Connect(function()
                         if autoPanel then
-                            autoPanel:StartAutoQuest(obj.target)
+                            autoPanel:StartAutoQuest(obj.target, questId, questData.giver)
                         end
                     end)
                     

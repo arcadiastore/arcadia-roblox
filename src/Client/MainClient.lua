@@ -126,6 +126,7 @@ UpdateEvent.OnClientEvent:Connect(function(data)
     elseif data.type == "Update" then
         HUD:Update(data)
         QuestTracker:Update(data)
+        AutoPanel:Update(data)
         EquipmentUI:Update(data)
         InventoryUI:Update(data)
         
@@ -136,6 +137,8 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         Notification:QuestCompleted(data.questName, data.rewards)
         
     elseif data.type == "QuestReady" then
+        Notification:QuestReady(data.questName)
+        AutoPanel:QuestReady(data.questId)
         local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
         local npcData = GameData:GetNPC(data.npcName)
         local npcName = npcData and npcData.name or data.npcName
