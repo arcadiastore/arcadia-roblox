@@ -75,6 +75,7 @@ Notification:Create(HUD:GetGUI())
 EquipmentUI:Create(playerGui)
 InventoryUI:Create(playerGui)
 AutoPanel:Create(playerGui)
+QuestTracker:SetAutoPanel(AutoPanel)
 
 print("[Client] All UI created!")
 
