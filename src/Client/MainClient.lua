@@ -77,18 +77,35 @@ print("[Client] All UI created!")
 -- Update handler
 UpdateEvent.OnClientEvent:Connect(function(data)
     if data.type == "Damage" then
-        print("[Client] Damage received: " .. data.damage .. " to " .. tostring(data.target))
-        print("[Client] monsterPart: " .. tostring(data.monsterPart))
-        print("[Client] currentHP: " .. tostring(data.currentHP) .. " / maxHP: " .. tostring(data.maxHP))
+        print("[Client] Damage: -" .. data.damage .. " to " .. tostring(data.monsterName) .. " HP:" .. data.currentHP .. "/" .. data.maxHP)
         
-        -- Show damage popup at monster position
-        if data.monsterPart then
-            DamagePopup:Show(data.monsterPart, data.damage, {
-                currentHP = data.currentHP,
-                maxHP = data.maxHP,
-            })
-        else
-            warn("[Client] monsterPart is nil!")
+        -- Find monster in workspace
+        local monsterFolder = workspace:FindFirstChild("Monsters")
+        if monsterFolder and data.monsterName then
+            local monsterPart = monsterFolder:FindFirstChild(data.monsterName)
+            if monsterPart then
+                -- Update HP label
+                local billboard = monsterPart:FindFirstChild("BillboardGui")
+                if billboard then
+                    local hpLabel = billboard:FindFirstChild("HPLabel")
+                    if hpLabel then
+                        hpLabel.Text = "HP: " .. data.currentHP .. "/" .. data.maxHP
+                        local pct = data.currentHP / data.maxHP
+                        if pct > 0.5 then
+                            hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+                        elseif pct > 0.25 then
+                            hpLabel.TextColor3 = Color3.fromRGB(255, 255, 50)
+                        else
+                            hpLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                        end
+                        print("[Client] HP updated: " .. hpLabel.Text)
+                    end
+                end
+                -- Show damage popup
+                DamagePopup:Show(monsterPart, data.damage)
+            else
+                warn("[Client] Monster not found: " .. data.monsterName)
+            end
         end
         
     elseif data.type == "Update" then

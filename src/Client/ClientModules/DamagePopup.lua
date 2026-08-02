@@ -6,37 +6,10 @@
 local DamagePopup = {}
 
 -- Show damage number at monster position
-function DamagePopup:Show(monsterPart, damage, hpData)
-    if not monsterPart or not monsterPart.Parent then
-        warn("[DamagePopup] monsterPart is nil or destroyed!")
-        return
-    end
+function DamagePopup:Show(monsterPart, damage)
+    if not monsterPart or not monsterPart.Parent then return end
     
-    print("[DamagePopup] Showing on: " .. monsterPart.Name .. " children: " .. #monsterPart:GetChildren())
-    
-    -- Update HP bar on monster (client-side)
-    if hpData then
-        local billboard = monsterPart:FindFirstChild("BillboardGui")
-        print("[DamagePopup] BillboardGui: " .. tostring(billboard))
-        if billboard then
-            local hpLabel = billboard:FindFirstChild("HPLabel")
-            print("[DamagePopup] HPLabel: " .. tostring(hpLabel))
-            if hpLabel then
-                hpLabel.Text = "HP: " .. hpData.currentHP .. "/" .. hpData.maxHP
-                print("[DamagePopup] HP label updated to: " .. hpLabel.Text)
-                local pct = hpData.currentHP / hpData.maxHP
-                if pct > 0.5 then
-                    hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-                elseif pct > 0.25 then
-                    hpLabel.TextColor3 = Color3.fromRGB(255, 255, 50)
-                else
-                    hpLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                end
-            end
-        end
-    end
-    
-    -- Create damage popup at monster position
+    -- Create damage popup BillboardGui at monster
     local popup = Instance.new("BillboardGui")
     popup.Name = "DamagePopup"
     popup.Size = UDim2.new(0, 80, 0, 40)

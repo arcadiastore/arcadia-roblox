@@ -46,12 +46,11 @@ function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
     
     print("[Combat] " .. player.Name .. " hit " .. monsterId .. " DMG:" .. damage .. " HP:" .. monsterHP .. "/" .. monsterData.hp)
     
-    -- Send damage + HP update to client (client updates visuals)
+    -- Send damage + HP update to client
     events.UpdateEvent:FireClient(player, {
         type = "Damage",
         damage = damage,
-        target = monsterId,
-        monsterPart = monsterPart,
+        monsterName = monsterPart.Name,
         currentHP = math.max(0, monsterHP),
         maxHP = monsterData.hp,
     })
