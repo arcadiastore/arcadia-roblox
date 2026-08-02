@@ -44,36 +44,16 @@ function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
     monsterHP = monsterHP - damage
     monsterPart:SetAttribute("CurrentHP", monsterHP)
     
-    -- Update HP bar visual (BillboardGui)
-    local billboard = monsterPart:FindFirstChild("BillboardGui")
-    if billboard then
-        local hpLabel = billboard:FindFirstChild("HPLabel")
-        if hpLabel then
-            hpLabel.Text = "HP: " .. math.max(0, monsterHP) .. "/" .. monsterData.hp
-            -- Color: green > yellow > red
-            local pct = monsterHP / monsterData.hp
-            if pct > 0.5 then
-                hpLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            elseif pct > 0.25 then
-                hpLabel.TextColor3 = Color3.fromRGB(255, 255, 50)
-            else
-                hpLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-            end
-            print("[Combat] Updated HP label: " .. hpLabel.Text)
-        else
-            warn("[Combat] HPLabel not found in BillboardGui!")
-        end
-    else
-        warn("[Combat] BillboardGui not found on " .. monsterPart.Name)
-    end
-    
     print("[Combat] " .. player.Name .. " hit " .. monsterId .. " DMG:" .. damage .. " HP:" .. monsterHP .. "/" .. monsterData.hp)
     
-    -- Send damage feedback to client
+    -- Send damage + HP update to client (client updates visuals)
     events.UpdateEvent:FireClient(player, {
         type = "Damage",
         damage = damage,
         target = monsterId,
+        monsterPart = monsterPart,
+        currentHP = math.max(0, monsterHP),
+        maxHP = monsterData.hp,
     })
     
     -- Check if monster died

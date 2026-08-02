@@ -77,7 +77,13 @@ print("[Client] All UI created!")
 -- Update handler
 UpdateEvent.OnClientEvent:Connect(function(data)
     if data.type == "Damage" then
-        DamagePopup:Show(data.damage, HUD:GetGUI())
+        -- Show damage popup at monster position
+        if data.monsterPart then
+            DamagePopup:Show(data.monsterPart, data.damage, {
+                currentHP = data.currentHP,
+                maxHP = data.maxHP,
+            })
+        end
         
     elseif data.type == "Update" then
         HUD:Update(data)
