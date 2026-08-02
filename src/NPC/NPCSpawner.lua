@@ -1,100 +1,26 @@
 --[[
-    Arcadia Online - NPC Spawner
+    Arcadia Online - NPC Spawner (v2 - Data-Driven)
     
-    Creates NPCs according to GDD:
-    - Elder Tetua (Quest Giver)
-    - Blacksmith (Shop - Weapons)
-    - Merchant (Shop - Potions)
-    - Guard (Dialogue)
-    - Training Master (Tutorial)
+    Semua data dari GameData module
+    Tidak ada hardcode!
     
     Place di: ServerScriptService/World (as Script)
-    
-    @author arcadiastore
-    @version 1.0.0
 ]]
 
-local ServerScriptService = game:GetService("ServerScriptService")
-local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
--- Tunggu game load
+-- Wait for GameData
 task.wait(3)
+local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
 
-print("[NPC] Spawning NPCs...")
-
--- ============================================
--- NPC DEFINITIONS (GDD)
--- ============================================
-
-local NPC_DATA = {
-    {
-        id = "Elder",
-        name = "Elder Tetua",
-        title = "Kepala Desa",
-        position = Vector3.new(-25, 1, -20),
-        color = Color3.fromRGB(200, 200, 200),  -- White robe
-        dialogue = {
-            greeting = "Selamat datang di desa kita, petualang muda!",
-            quest = "Aku punya tugas untukmu. Maukah kau membantu desa?",
-            questComplete = "Luar biasa! Terimalah hadiah ini!",
-        },
-        quests = {"quest_kill_slimes"},
-    },
-    {
-        id = "Blacksmith",
-        name = "Pandai Besi",
-        title = "Ahli Senjata",
-        position = Vector3.new(25, 1, -15),
-        color = Color3.fromRGB(139, 90, 43),  -- Brown apron
-        dialogue = {
-            greeting = "Butuh senjata atau armor? Aku punya yang terbaik!",
-        },
-        shop = "WeaponShop",
-    },
-    {
-        id = "Merchant",
-        name = "Pedagang",
-        title = "Penjaja Keliling",
-        position = Vector3.new(-25, 1, 5),
-        color = Color3.fromRGB(255, 200, 100),  -- Yellow/gold
-        dialogue = {
-            greeting = "Hei! Mau beli sesuatu? Aku punya barang bagus!",
-        },
-        shop = "GeneralShop",
-    },
-    {
-        id = "Guard",
-        name = "Penjaga Desa",
-        title = "Kapten Penjaga",
-        position = Vector3.new(0, 1, -25),
-        color = Color3.fromRGB(100, 100, 200),  -- Blue armor
-        dialogue = {
-            greeting = "Hati-hati di luar desa. Monster semakin berbahaya.",
-            tip = "Gunakan serangan dasar untuk slime, tapi untuk serigala kau perlu skill.",
-        },
-    },
-    {
-        id = "TrainingMaster",
-        name = "Master Pelatihan",
-        title = "Instruktur Tempur",
-        position = Vector3.new(0, 1, 35),
-        color = Color3.fromRGB(200, 100, 100),  -- Red gi
-        dialogue = {
-            greeting = "Selamat datang di Training Ground! Di sini kau bisa berlatih.",
-            tutorial_attack = "Klik kiri untuk menyerang. Coba serang dummy itu!",
-            tutorial_skill = "Tekan 1-4 untuk menggunakan skill. Skill punya cooldown.",
-            tutorial_quest = "Bicara dengan Elder Tetua untuk mendapatkan quest pertamamu.",
-        },
-    },
-}
+print("[NPC] Spawning NPCs from GameData...")
 
 -- ============================================
--- NPC CREATION FUNCTION
+-- NPC CREATION
 -- ============================================
 
 local function createNPC(npcData)
-    -- Create folder
     local npcFolder = Instance.new("Model")
     npcFolder.Name = "NPC_" .. npcData.id
     
@@ -116,7 +42,7 @@ local function createNPC(npcData)
     head.Position = npcData.position + Vector3.new(0, 3.6, 0)
     head.Anchored = true
     head.Material = Enum.Material.SmoothPlastic
-    head.Color = Color3.fromRGB(255, 205, 148)  -- Skin color
+    head.Color = Color3.fromRGB(255, 205, 148)
     head.Parent = npcFolder
     
     -- Name tag
@@ -150,27 +76,13 @@ local function createNPC(npcData)
     titleLabel.Text = npcData.title
     titleLabel.Parent = billboard
     
-    -- ClickDetector for interaction
+    -- ClickDetector
     local clickDetector = Instance.new("ClickDetector")
     clickDetector.MaxActivationDistance = 10
     clickDetector.Parent = body
     
-    -- Interaction script
-    local interactionScript = Instance.new("Script")
-    interactionScript.Name = "Interaction"
-    interactionScript.Parent = body
-    
-    -- Set attributes for data
+    -- Set attributes (only ID, data from GameData)
     body:SetAttribute("NPCId", npcData.id)
-    body:SetAttribute("NPCName", npcData.name)
-    body:SetAttribute("HasQuest", npcData.quests ~= nil)
-    body:SetAttribute("HasShop", npcData.shop ~= nil)
-    
-    -- Store dialogue in attributes (simplified)
-    if npcData.dialogue then
-        body:SetAttribute("Greeting", npcData.dialogue.greeting or "")
-        body:SetAttribute("QuestDialogue", npcData.dialogue.quest or "")
-    end
     
     npcFolder.Parent = Workspace:FindFirstChild("NPCs") or Workspace
     
@@ -180,10 +92,10 @@ local function createNPC(npcData)
 end
 
 -- ============================================
--- SPAWN ALL NPCs
+-- SPAWN FROM GAMEDATA
 -- ============================================
 
--- Create NPCs folder if not exists
+-- Create NPCs folder
 local npcsFolder = Workspace:FindFirstChild("NPCs")
 if not npcsFolder then
     npcsFolder = Instance.new("Folder")
@@ -191,14 +103,11 @@ if not npcsFolder then
     npcsFolder.Parent = Workspace
 end
 
--- Spawn NPCs
-for _, npcData in ipairs(NPC_DATA) do
+-- Spawn NPCs from GameData
+local totalSpawned = 0
+for npcId, npcData in pairs(GameData.NPCs) do
     createNPC(npcData)
+    totalSpawned = totalSpawned + 1
 end
 
-print("[NPC] All NPCs spawned!")
-print("[NPC] - Elder Tetua (Quest)")
-print("[NPC] - Pandai Besi (Shop)")
-print("[NPC] - Pedagang (Shop)")
-print("[NPC] - Penjaga Desa (Info)")
-print("[NPC] - Master Pelatihan (Tutorial)")
+print("[NPC] All NPCs spawned from GameData: " .. totalSpawned .. " total")

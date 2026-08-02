@@ -1,116 +1,26 @@
 --[[
-    Arcadia Online - Monster Spawner
+    Arcadia Online - Monster Spawner (v2 - Data-Driven)
     
-    Creates monsters according to GDD:
-    - Slime (Lv.1-3) - Training Ground
-    - Wolf (Lv.5-8) - Forest Entrance
-    - Boar (Lv.7-10) - Deep Forest
-    - Guardian Boss (Lv.10) - Forest Gate
+    Semua data dari GameData module
+    Tidak ada hardcode!
     
     Place di: ServerScriptService/World (as Script)
-    
-    @author arcadiastore
-    @version 1.0.0
 ]]
 
-local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
--- Tunggu game load
-task.wait(4)
+-- Wait for GameData
+task.wait(3)
+local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
 
-print("[Monster] Spawning Monsters...")
-
--- ============================================
--- MONSTER DEFINITIONS (GDD)
--- ============================================
-
-local MONSTER_DATA = {
-    -- Slime (Lv.1-3) - Training Ground
-    {
-        id = "Slime",
-        name = "Slime",
-        level = 1,
-        hp = 50,
-        atk = 5,
-        def = 3,
-        exp = 20,
-        gold = 10,
-        color = Color3.fromRGB(50, 200, 50),  -- Green
-        size = Vector3.new(3, 3, 3),
-        shape = "Ball",
-        positions = {
-            Vector3.new(10, 2, 45),
-            Vector3.new(-10, 2, 45),
-            Vector3.new(15, 2, 50),
-            Vector3.new(-15, 2, 50),
-            Vector3.new(0, 2, 55),
-        },
-    },
-    -- Wolf (Lv.5-8) - Forest Entrance
-    {
-        id = "Wolf",
-        name = "Serigala",
-        level = 5,
-        hp = 120,
-        atk = 15,
-        def = 8,
-        exp = 50,
-        gold = 25,
-        color = Color3.fromRGB(128, 128, 128),  -- Gray
-        size = Vector3.new(3, 2, 5),
-        shape = "Block",
-        positions = {
-            Vector3.new(20, 1.5, -40),
-            Vector3.new(-20, 1.5, -40),
-            Vector3.new(15, 1.5, -50),
-            Vector3.new(-15, 1.5, -50),
-        },
-    },
-    -- Boar (Lv.7-10) - Deep Forest
-    {
-        id = "Boar",
-        name = "Babi Hutan",
-        level = 7,
-        hp = 180,
-        atk = 20,
-        def = 12,
-        exp = 80,
-        gold = 40,
-        color = Color3.fromRGB(139, 90, 43),  -- Brown
-        size = Vector3.new(4, 3, 5),
-        shape = "Block",
-        positions = {
-            Vector3.new(30, 2, -60),
-            Vector3.new(-30, 2, -60),
-            Vector3.new(25, 2, -70),
-        },
-    },
-    -- Guardian Boss (Lv.10) - Forest Gate
-    {
-        id = "Guardian",
-        name = "Guardian of the Forest",
-        level = 10,
-        hp = 500,
-        atk = 35,
-        def = 20,
-        exp = 200,
-        gold = 100,
-        color = Color3.fromRGB(200, 50, 50),  -- Red (boss)
-        size = Vector3.new(6, 8, 4),
-        shape = "Block",
-        positions = {
-            Vector3.new(0, 4, -80),
-        },
-    },
-}
+print("[Monster] Spawning Monsters from GameData...")
 
 -- ============================================
--- MONSTER CREATION FUNCTION
+-- MONSTER CREATION
 -- ============================================
 
 local function createMonster(monsterData, position, index)
-    -- Create model
     local monster = Instance.new("Model")
     monster.Name = monsterData.id .. "_" .. index
     
@@ -131,7 +41,7 @@ local function createMonster(monsterData, position, index)
     body.Color = monsterData.color
     body.Parent = monster
     
-    -- Add Humanoid for health system
+    -- Humanoid for health
     local humanoid = Instance.new("Humanoid")
     humanoid.MaxHealth = monsterData.hp
     humanoid.Health = monsterData.hp
@@ -145,7 +55,7 @@ local function createMonster(monsterData, position, index)
     billboard.Adornee = body
     billboard.Parent = body
     
-    -- Health bar background
+    -- Health bar
     local hpBg = Instance.new("Frame")
     hpBg.Name = "HealthBG"
     hpBg.Size = UDim2.new(1, 0, 0.3, 0)
@@ -153,11 +63,6 @@ local function createMonster(monsterData, position, index)
     hpBg.BorderSizePixel = 0
     hpBg.Parent = billboard
     
-    local hpCorner = Instance.new("UICorner")
-    hpCorner.CornerRadius = UDim.new(0, 4)
-    hpCorner.Parent = hpBg
-    
-    -- Health bar fill
     local hpFill = Instance.new("Frame")
     hpFill.Name = "HealthFill"
     hpFill.Size = UDim2.new(1, 0, 1, 0)
@@ -165,11 +70,7 @@ local function createMonster(monsterData, position, index)
     hpFill.BorderSizePixel = 0
     hpFill.Parent = hpBg
     
-    local hpFillCorner = Instance.new("UICorner")
-    hpFillCorner.CornerRadius = UDim.new(0, 4)
-    hpFillCorner.Parent = hpFill
-    
-    -- Name text
+    -- Name label
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Name = "Name"
     nameLabel.Size = UDim2.new(1, 0, 0.7, 0)
@@ -182,23 +83,16 @@ local function createMonster(monsterData, position, index)
     nameLabel.Text = monsterData.name .. " Lv." .. monsterData.level
     nameLabel.Parent = billboard
     
-    -- Set attributes for data
-    body:SetAttribute("MonsterId", monsterData.id)
-    body:SetAttribute("MonsterName", monsterData.name)
-    body:SetAttribute("Level", monsterData.level)
-    body:SetAttribute("HP", monsterData.hp)
-    body:SetAttribute("ATK", monsterData.atk)
-    body:SetAttribute("DEF", monsterData.def)
-    body:SetAttribute("EXP", monsterData.exp)
-    body:SetAttribute("Gold", monsterData.gold)
-    body:SetAttribute("SpawnPosition", tostring(position))
-    
-    -- ClickDetector for targeting
+    -- ClickDetector
     local clickDetector = Instance.new("ClickDetector")
     clickDetector.MaxActivationDistance = 20
     clickDetector.Parent = body
     
-    -- Update health bar
+    -- Set attributes (only ID, data from GameData)
+    body:SetAttribute("MonsterId", monsterData.id)
+    body:SetAttribute("HP", monsterData.hp)
+    
+    -- Health bar update
     humanoid.HealthChanged:Connect(function(newHealth)
         local percent = newHealth / humanoid.MaxHealth
         hpFill.Size = UDim2.new(percent, 0, 1, 0)
@@ -216,9 +110,10 @@ local function createMonster(monsterData, position, index)
     humanoid.Died:Connect(function()
         print("[Monster] " .. monsterData.name .. " defeated!")
         
-        -- Respawn after delay
-        task.delay(10, function()
-            humanoid.Health = humanoid.MaxHealth
+        -- Respawn using GameData respawnTime
+        task.delay(monsterData.respawnTime, function()
+            humanoid.Health = monsterData.hp
+            body:SetAttribute("HP", monsterData.hp)
             body.Position = position
             print("[Monster] " .. monsterData.name .. " respawned!")
         end)
@@ -230,10 +125,10 @@ local function createMonster(monsterData, position, index)
 end
 
 -- ============================================
--- SPAWN ALL MONSTERS
+-- SPAWN FROM GAMEDATA
 -- ============================================
 
--- Create Monsters folder if not exists
+-- Create Monsters folder
 local monstersFolder = Workspace:FindFirstChild("Monsters")
 if not monstersFolder then
     monstersFolder = Instance.new("Folder")
@@ -241,15 +136,20 @@ if not monstersFolder then
     monstersFolder.Parent = Workspace
 end
 
--- Spawn monsters
-for _, monsterData in ipairs(MONSTER_DATA) do
-    for i, position in ipairs(monsterData.positions) do
-        createMonster(monsterData, position, i)
+-- Spawn monsters from GameData
+local totalSpawned = 0
+for monsterId, monsterData in pairs(GameData.Monsters) do
+    local spawnArea = monsterData.spawnArea
+    local positions = GameData.SpawnPositions[spawnArea]
+    
+    if positions then
+        for i, position in ipairs(positions) do
+            createMonster(monsterData, position, i)
+            totalSpawned = totalSpawned + 1
+        end
+    else
+        warn("[Monster] No spawn positions for area: " .. spawnArea)
     end
 end
 
-print("[Monster] All monsters spawned!")
-print("[Monster] - Slime x5 (Training Ground)")
-print("[Monster] - Wolf x4 (Forest Entrance)")
-print("[Monster] - Boar x3 (Deep Forest)")
-print("[Monster] - Guardian Boss x1 (Forest Gate)")
+print("[Monster] All monsters spawned from GameData: " .. totalSpawned .. " total")

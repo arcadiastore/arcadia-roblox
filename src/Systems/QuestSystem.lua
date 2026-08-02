@@ -1,124 +1,20 @@
 --[[
-    Arcadia Online - Quest System
+    Arcadia Online - Quest System (v2 - Data-Driven)
     
-    Handles quests according to GDD:
-    - Accept quests from NPCs
-    - Track quest progress
-    - Complete quests for rewards
-    - Quest chains
+    Semua data dari GameData module
+    Tidak ada hardcode!
     
     Place di: ServerScriptService/Systems (as Script)
-    
-    @author arcadiastore
-    @version 1.0.0
 ]]
 
 local Players = game:GetService("Players")
-local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Tunggu game load
-task.wait(6)
+-- Wait for GameData
+task.wait(3)
+local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
 
 print("[Quest] Quest System initializing...")
-
--- ============================================
--- QUEST DEFINITIONS (GDD)
--- ============================================
-
-local QUEST_DATA = {
-    -- Quest 1: Kill Slimes (Tutorial)
-    {
-        id = "quest_kill_slimes",
-        name = "Permintaan Tetua",
-        description = "Elder Tetua meminta bantuanmu untuk membersihkan desa dari Slime. Bunuh 5 Slime di Training Ground.",
-        level = 1,
-        giver = "Elder",
-        objectives = {
-            {
-                type = "kill",
-                target = "Slime",
-                count = 5,
-                current = 0,
-            },
-        },
-        rewards = {
-            exp = 50,
-            gold = 100,
-        },
-        prerequisite = nil,
-        chain = "quest_herb_collector",
-    },
-    
-    -- Quest 2: Collect Herbs
-    {
-        id = "quest_herb_collector",
-        name = "Pengumpul Herbal",
-        description = "Kumpulkan 10 Herbal di sekitar desa untuk obat tradisional.",
-        level = 3,
-        giver = "Elder",
-        objectives = {
-            {
-                type = "collect",
-                target = "Herb",
-                count = 10,
-                current = 0,
-            },
-        },
-        rewards = {
-            exp = 100,
-            gold = 200,
-        },
-        prerequisite = "quest_kill_slimes",
-        chain = "quest_elder_wisdom",
-    },
-    
-    -- Quest 3: Talk to Elder
-    {
-        id = "quest_elder_wisdom",
-        name = "Kebijaksanaan Tetua",
-        description = "Bicara dengan Elder Tetua untuk mempelajari sejarah desa.",
-        level = 5,
-        giver = "Elder",
-        objectives = {
-            {
-                type = "talk",
-                target = "Elder",
-                count = 1,
-                current = 0,
-            },
-        },
-        rewards = {
-            exp = 200,
-            gold = 0,
-        },
-        prerequisite = "quest_herb_collector",
-        chain = "quest_boss_wolf",
-    },
-    
-    -- Quest 4: Kill Boss Wolf
-    {
-        id = "quest_boss_wolf",
-        name = "Alpha Wolf",
-        description = "Kalahkan Alpha Wolf yang mengancam desa. Hati-hati, dia sangat kuat!",
-        level = 8,
-        giver = "Guard",
-        objectives = {
-            {
-                type = "kill",
-                target = "Wolf",
-                count = 1,
-                current = 0,
-            },
-        },
-        rewards = {
-            exp = 500,
-            gold = 1000,
-        },
-        prerequisite = "quest_elder_wisdom",
-        chain = nil,
-    },
-}
 
 -- ============================================
 -- QUEST MANAGER
@@ -129,94 +25,85 @@ QuestManager.__index = QuestManager
 
 function QuestManager.new()
     local self = setmetatable({}, QuestManager)
-    
-    -- Player quest data
     self.playerQuests = {}
-    
     return self
 end
 
 function QuestManager:Init()
-    -- Setup connections
     self:SetupPlayerConnections()
     self:SetupQuestEvents()
+    
+    -- Create Events folder if not exists
+    local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
+    if not eventsFolder then
+        eventsFolder = Instance.new("Folder")
+        eventsFolder.Name = "Events"
+        eventsFolder.Parent = ReplicatedStorage
+    end
     
     print("[Quest] Quest System initialized!")
 end
 
 function QuestManager:SetupPlayerConnections()
-    -- Player join
     Players.PlayerAdded:Connect(function(player)
         self:OnPlayerAdded(player)
     end)
     
-    -- Player leave
     Players.PlayerRemoving:Connect(function(player)
         self:OnPlayerRemoving(player)
     end)
     
-    -- Handle existing players
     for _, player in ipairs(Players:GetPlayers()) do
         self:OnPlayerAdded(player)
     end
 end
 
 function QuestManager:OnPlayerAdded(player)
-    -- Initialize player quest data
     self.playerQuests[player.UserId] = {
         activeQuests = {},
         completedQuests = {},
-        questProgress = {},
     }
-    
     print("[Quest] Player quest data initialized: " .. player.Name)
 end
 
 function QuestManager:OnPlayerRemoving(player)
-    -- Cleanup
     self.playerQuests[player.UserId] = nil
 end
 
 function QuestManager:SetupQuestEvents()
-    -- RemoteEvent untuk quest
+    local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
+    
     local questEvent = Instance.new("RemoteEvent")
     questEvent.Name = "QuestEvent"
-    questEvent.Parent = ReplicatedStorage:FindFirstChild("Events")
+    questEvent.Parent = eventsFolder
     
-    -- Handle quest requests
-    questEvent.OnServerEvent:Connect(function(player, action, questId)
+    questEvent.OnServerEvent:Connect(function(player, action, data)
         if action == "accept" then
-            self:AcceptQuest(player, questId)
+            self:AcceptQuest(player, data.questId)
         elseif action == "complete" then
-            self:CompleteQuest(player, questId)
+            self:CompleteQuest(player, data.questId)
         end
     end)
 end
 
 function QuestManager:AcceptQuest(player, questId)
-    -- Find quest data
-    local questData = nil
-    for _, quest in ipairs(QUEST_DATA) do
-        if quest.id == questId then
-            questData = quest
-            break
-        end
-    end
-    
+    -- Get quest data from GameData
+    local questData = GameData:GetQuest(questId)
     if not questData then
         warn("[Quest] Quest not found: " .. questId)
         return
     end
     
-    -- Check level requirement
+    -- Check level
     local playerStats = _G.CombatManager and _G.CombatManager:GetPlayerStats(player)
     if playerStats and playerStats.level < questData.level then
         warn("[Quest] Player level too low for quest: " .. questId)
         return
     end
     
-    -- Check prerequisite
     local playerQuestData = self.playerQuests[player.UserId]
+    
+    -- Check prerequisite from GameData
     if questData.prerequisite then
         if not playerQuestData.completedQuests[questData.prerequisite] then
             warn("[Quest] Prerequisite not completed: " .. questData.prerequisite)
@@ -224,19 +111,18 @@ function QuestManager:AcceptQuest(player, questId)
         end
     end
     
-    -- Check if already active
+    -- Check if already active or completed
     if playerQuestData.activeQuests[questId] then
         warn("[Quest] Quest already active: " .. questId)
         return
     end
     
-    -- Check if already completed
     if playerQuestData.completedQuests[questId] then
         warn("[Quest] Quest already completed: " .. questId)
         return
     end
     
-    -- Accept quest
+    -- Create quest progress from GameData
     local questProgress = {
         id = questData.id,
         name = questData.name,
@@ -246,7 +132,7 @@ function QuestManager:AcceptQuest(player, questId)
         acceptedAt = os.time(),
     }
     
-    -- Copy objectives
+    -- Copy objectives from GameData
     for _, obj in ipairs(questData.objectives) do
         table.insert(questProgress.objectives, {
             type = obj.type,
@@ -258,8 +144,9 @@ function QuestManager:AcceptQuest(player, questId)
     
     playerQuestData.activeQuests[questId] = questProgress
     
-    -- Send feedback
-    local questEvent = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent")
+    -- Send to client
+    local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
+    local questEvent = eventsFolder:FindFirstChild("QuestEvent")
     if questEvent then
         questEvent:FireClient(player, {
             type = "QuestAccepted",
@@ -272,22 +159,17 @@ end
 
 function QuestManager:UpdateQuestProgress(player, questId, objectiveType, target, amount)
     local playerQuestData = self.playerQuests[player.UserId]
-    if not playerQuestData then
-        return
-    end
+    if not playerQuestData then return end
     
     local quest = playerQuestData.activeQuests[questId]
-    if not quest then
-        return
-    end
+    if not quest then return end
     
-    -- Update objectives
     for _, obj in ipairs(quest.objectives) do
         if obj.type == objectiveType and obj.target == target then
             obj.current = math.min(obj.current + amount, obj.count)
             
-            -- Send progress update
-            local questEvent = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent")
+            local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
+            local questEvent = eventsFolder:FindFirstChild("QuestEvent")
             if questEvent then
                 questEvent:FireClient(player, {
                     type = "QuestProgress",
@@ -303,9 +185,7 @@ end
 
 function QuestManager:CompleteQuest(player, questId)
     local playerQuestData = self.playerQuests[player.UserId]
-    if not playerQuestData then
-        return
-    end
+    if not playerQuestData then return end
     
     local quest = playerQuestData.activeQuests[questId]
     if not quest then
@@ -313,7 +193,7 @@ function QuestManager:CompleteQuest(player, questId)
         return
     end
     
-    -- Check if all objectives completed
+    -- Check all objectives
     local allCompleted = true
     for _, obj in ipairs(quest.objectives) do
         if obj.current < obj.count then
@@ -327,13 +207,21 @@ function QuestManager:CompleteQuest(player, questId)
         return
     end
     
-    -- Give rewards
+    -- Give rewards from GameData
     local playerStats = _G.CombatManager and _G.CombatManager:GetPlayerStats(player)
     if playerStats then
         playerStats.exp = playerStats.exp + quest.rewards.exp
         playerStats.gold = playerStats.gold + quest.rewards.gold
         
-        -- Check level up
+        -- Give item rewards
+        if quest.rewards.items then
+            for _, item in ipairs(quest.rewards.items) do
+                if _G.ShopManager then
+                    _G.ShopManager:AddToInventory(player, item.itemId, item.count)
+                end
+            end
+        end
+        
         if _G.CombatManager then
             _G.CombatManager:CheckLevelUp(player, playerStats)
         end
@@ -343,8 +231,9 @@ function QuestManager:CompleteQuest(player, questId)
     playerQuestData.completedQuests[questId] = true
     playerQuestData.activeQuests[questId] = nil
     
-    -- Send feedback
-    local questEvent = ReplicatedStorage:FindFirstChild("Events"):FindFirstChild("QuestEvent")
+    -- Send to client
+    local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
+    local questEvent = eventsFolder:FindFirstChild("QuestEvent")
     if questEvent then
         questEvent:FireClient(player, {
             type = "QuestCompleted",
@@ -362,43 +251,18 @@ function QuestManager:GetPlayerQuests(player)
 end
 
 function QuestManager:GetAvailableQuests(player)
-    local available = {}
     local playerQuestData = self.playerQuests[player.UserId]
+    if not playerQuestData then return {} end
     
-    if not playerQuestData then
-        return available
-    end
+    local playerStats = _G.CombatManager and _G.CombatManager:GetPlayerStats(player)
+    local level = playerStats and playerStats.level or 1
     
-    for _, quest in ipairs(QUEST_DATA) do
-        -- Check if already active or completed
-        if not playerQuestData.activeQuests[quest.id] and not playerQuestData.completedQuests[quest.id] then
-            -- Check prerequisite
-            if not quest.prerequisite or playerQuestData.completedQuests[quest.prerequisite] then
-                table.insert(available, quest)
-            end
-        end
-    end
-    
-    return available
+    return GameData:GetAvailableQuests(level, playerQuestData.completedQuests)
 end
 
--- ============================================
--- INITIALIZE
--- ============================================
-
--- Create Events folder if not exists
-local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
-if not eventsFolder then
-    eventsFolder = Instance.new("Folder")
-    eventsFolder.Name = "Events"
-    eventsFolder.Parent = ReplicatedStorage
-end
-
--- Initialize quest manager
+-- Initialize
 local questManager = QuestManager.new()
 questManager:Init()
-
--- Make accessible from other scripts
 _G.QuestManager = questManager
 
 print("[Quest] Quest System ready!")
