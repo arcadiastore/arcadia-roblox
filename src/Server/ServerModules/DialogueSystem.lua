@@ -145,6 +145,13 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
         return false
     end
     
+    -- Handle job_done state (after job selection)
+    if state.currentNode == "job_done" then
+        playerDialogueState[player.UserId] = nil
+        events.DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+        return true
+    end
+    
     -- Handle quest completion
     if state.currentNode == "quest_complete" and state.questId then
         if responseText == "Terima kasih! (Ambil Reward)" or responseText == "Ambil Reward" then
@@ -299,10 +306,15 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
             local success, msg = PlayerData:SetJob(player, selected.jobId, events)
             
             local npcData = GameData:GetNPC(npcId)
-            local jobData = GameData.Jobs and GameData.Jobs[selected.jobId]
             local responseMsg = success 
                 and (msg .. "\n\nStats kamu telah diperbarui sesuai job " .. selected.jobId .. "!")
                 or msg
+            
+            -- Keep state alive for "Terima kasih!" button
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "job_done",
+            }
             
             events.DialogueEvent:FireClient(player, {
                 type = "Continue",
@@ -314,7 +326,6 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                 },
             })
             
-            playerDialogueState[player.UserId] = nil
             return true
         end
     end
