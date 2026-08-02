@@ -83,7 +83,13 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         local monsterFolder = workspace:FindFirstChild("Monsters")
         if monsterFolder and data.monsterName then
             local monsterPart = monsterFolder:FindFirstChild(data.monsterName)
+            print("[Client] Looking for: " .. data.monsterName .. " Found: " .. tostring(monsterPart))
+            
             if monsterPart then
+                -- List children for debug
+                for _, child in ipairs(monsterPart:GetChildren()) do
+                    print("[Client]   Child: " .. child.Name .. " (" .. child.ClassName .. ")")
+                end
                 -- Update HP label
                 local billboard = monsterPart:FindFirstChild("BillboardGui")
                 if billboard then
