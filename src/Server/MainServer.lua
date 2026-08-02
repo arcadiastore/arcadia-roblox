@@ -101,13 +101,15 @@ print("[Server] Player connections ready!")
 
 -- Combat
 AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
+    print("[Server] AttackEvent received from " .. player.Name)
     CombatSystem:HandleAttack(player, monsterPart, PlayerData, events)
 end)
 
 -- Shop
 ShopEvent.OnServerEvent:Connect(function(player, action, data)
+    print("[Server] ShopEvent: " .. player.Name .. " -> " .. action)
     local pData = PlayerData:Get(player)
-    if not pData then return end
+    if not pData then warn("[Server] No player data!") return end
     
     if action == "open" then
         ShopSystem:OpenShop(player, pData, data.shopId, events)
@@ -118,8 +120,9 @@ end)
 
 -- Quest
 QuestEvent.OnServerEvent:Connect(function(player, action, data)
+    print("[Server] QuestEvent: " .. player.Name .. " -> " .. action)
     local pData = PlayerData:Get(player)
-    if not pData then return end
+    if not pData then warn("[Server] No player data!") return end
     
     if action == "accept" then
         QuestSystem:AcceptQuest(player, pData, data.questId, events)
@@ -128,13 +131,16 @@ end)
 
 -- Dialogue
 DialogueEvent.OnServerEvent:Connect(function(player, action, data)
+    print("[Server] DialogueEvent: " .. player.Name .. " -> " .. action .. " -> " .. tostring(data.npcId))
     local pData = PlayerData:Get(player)
-    if not pData then return end
+    if not pData then warn("[Server] No player data!") return end
     
     if action == "talk" then
-        DialogueSystem:Talk(player, pData, data.npcId, events)
+        local result = DialogueSystem:Talk(player, pData, data.npcId, events)
+        print("[Server] Talk result: " .. tostring(result))
     elseif action == "respond" then
-        DialogueSystem:Respond(player, pData, data.npcId, data.responseText, events)
+        local result = DialogueSystem:Respond(player, pData, data.npcId, data.responseText, events)
+        print("[Server] Respond result: " .. tostring(result))
     end
 end)
 

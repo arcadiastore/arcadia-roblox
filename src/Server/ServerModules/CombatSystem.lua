@@ -9,10 +9,20 @@ local CombatSystem = {}
 
 -- Handle attack event
 function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
-    if not monsterPart or not monsterPart.Parent then return end
+    print("[Combat] HandleAttack called by " .. player.Name)
+    
+    if not monsterPart or not monsterPart.Parent then
+        warn("[Combat] Invalid monster part")
+        return
+    end
     
     local monsterId = monsterPart:GetAttribute("MonsterId")
-    if not monsterId then return end
+    print("[Combat] MonsterId: " .. tostring(monsterId))
+    
+    if not monsterId then
+        warn("[Combat] No MonsterId attribute on " .. monsterPart.Name)
+        return
+    end
     
     local data = playerData:Get(player)
     if not data then return end
