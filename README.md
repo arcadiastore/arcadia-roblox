@@ -54,6 +54,20 @@ end
 - **Latency**: Design untuk network delay
 - **Anti-cheat**: Jangan trust client
 
+### 4. INFORMATIF ✨
+**Player harus SELALU tahu apa yang harus dilakukan!**
+
+- **Quest Preview**: Tampilkan detail quest SEBELUM accept
+  - Nama quest, objektif, reward
+  - Player bisa accept atau decline
+- **Quest Tracker**: Tunjukkan progress + langkah selanjutnya
+  - "✓ Kembali ke Elder untuk ambil reward!"
+- **Notification**: Beritahu semua peristiwa penting
+  - Quest accepted, quest complete, level up
+- **Status Indicators**: ✓ (selesai), > (belum), → (arah)
+
+**Prinsip**: Kalau player tanya "terus gimana?", UI kurang informatif!
+
 ---
 
 ## Overview

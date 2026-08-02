@@ -548,7 +548,56 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             return
         end
         
-        -- Find selected response
+        -- Handle dynamic quest responses (quest preview buttons)
+        if responseText == "✓ Saya terima quest ini!" or responseText == "Saya terima quest ini!" then
+            -- Accept quest from current node
+            if currentNode.questId then
+                local questData = GameData:GetQuest(currentNode.questId)
+                if questData and not pData.activeQuests[currentNode.questId] and not pData.completedQuests[currentNode.questId] then
+                    pData.activeQuests[currentNode.questId] = {
+                        id = currentNode.questId,
+                        progress = {},
+                        readyToComplete = false,
+                    }
+                    for i, obj in ipairs(questData.objectives) do
+                        pData.activeQuests[currentNode.questId].progress[i] = 0
+                    end
+                    print("[Server] " .. player.Name .. " accepted quest: " .. currentNode.questId)
+                    
+                    UpdateEvent:FireClient(player, {
+                        type = "QuestAccepted",
+                        questId = currentNode.questId,
+                        questName = questData.name,
+                    })
+                    
+                    UpdateEvent:FireClient(player, {
+                        type = "Update",
+                        level = pData.level,
+                        exp = pData.exp,
+                        gold = pData.gold,
+                        hp = pData.hp,
+                        maxHp = pData.maxHp,
+                        atk = pData.atk,
+                        def = pData.def,
+                        activeQuests = pData.activeQuests,
+                        completedQuests = pData.completedQuests,
+                    })
+                end
+            end
+            
+            playerDialogueState[player.UserId] = nil
+            DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+            return
+        end
+        
+        if responseText == "✗ Nanti saja, saya belum siap." or responseText == "Nanti saja, saya belum siap." or responseText == "Nanti saja." then
+            -- Decline quest
+            playerDialogueState[player.UserId] = nil
+            DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+            return
+        end
+        
+        -- Find selected response from dialogue data
         local selected = nil
         for _, resp in ipairs(currentNode.responses) do
             if resp.text == responseText then
