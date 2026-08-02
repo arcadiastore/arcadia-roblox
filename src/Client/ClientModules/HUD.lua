@@ -78,7 +78,7 @@ function HUD:Create(playerGui)
     expLabel.Size = UDim2.new(1, -10, 0, 18)
     expLabel.Position = UDim2.new(0, 5, 0, 80)
     expLabel.BackgroundTransparency = 1
-    expLabel.Text = "EXP: 0"
+    expLabel.Text = "EXP: 0 / 100"
     expLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     expLabel.TextStrokeTransparency = 0
     expLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -132,9 +132,14 @@ function HUD:Update(data)
         jobLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
     end
     
-    levelLabel.Text = "Lv." .. data.level .. " | EXP: " .. data.exp
+    levelLabel.Text = "Lv." .. data.level
     hpLabel.Text = "HP: " .. data.hp .. "/" .. data.maxHp
     mpLabel.Text = "MP: " .. (data.mp or 50) .. "/" .. (data.maxMp or 50)
+    
+    -- Calculate EXP needed for next level
+    local expNeeded = math.floor(100 * (1.5 ^ (data.level - 1)))
+    expLabel.Text = "EXP: " .. data.exp .. " / " .. expNeeded
+    
     goldLabel.Text = "Gold: " .. data.gold
     atkLabel.Text = "ATK:" .. data.atk .. " DEF:" .. data.def .. " SPD:" .. (data.spd or 10)
 end
