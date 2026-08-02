@@ -124,7 +124,7 @@ function CombatSystem:OnMonsterDeath(player, monsterPart, monsterId, monsterData
     end
     
     -- Hide name tag
-    local billboard = monsterPart:FindFirstChild("BillboardGui")
+    local billboard = monsterPart:FindFirstChild("NameTag")
     if billboard then
         billboard.Enabled = false
     end
