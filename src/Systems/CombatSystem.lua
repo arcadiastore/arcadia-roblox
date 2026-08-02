@@ -199,6 +199,16 @@ function CombatManager:HandleMonsterDeath(player, monsterPart, expReward, goldRe
         end
         
         print("[Combat] Rewards: +" .. expReward .. " EXP, +" .. goldReward .. " Gold")
+        
+        -- Update ALL active quests that have kill objectives for this monster
+        if _G.QuestManager then
+            local playerQuestData = _G.QuestManager:GetPlayerQuests(player)
+            if playerQuestData and playerQuestData.activeQuests then
+                for questId, quest in pairs(playerQuestData.activeQuests) do
+                    _G.QuestManager:UpdateQuestProgress(player, questId, "kill", monsterName, 1)
+                end
+            end
+        end
     end
     
     -- Monster death handling (respawn)
