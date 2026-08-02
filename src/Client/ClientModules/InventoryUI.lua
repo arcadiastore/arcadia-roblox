@@ -171,17 +171,10 @@ function InventoryUI:RefreshItems()
         end
     end
     
-    -- Show empty message
-    if #items == 0 then
-        local emptyLabel = Instance.new("TextLabel")
-        emptyLabel.Size = UDim2.new(1, 0, 0, 40)
-        emptyLabel.BackgroundTransparency = 1
-        emptyLabel.Text = "Tidak ada item"
-        emptyLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-        emptyLabel.Font = Enum.Font.Gotham
-        emptyLabel.TextScaled = true
-        emptyLabel.Parent = scrollFrame
-        return
+    -- Sort: newest first (reverse order), then by name
+    for i = 1, math.floor(#items / 2) do
+        local j = #items - i + 1
+        items[i], items[j] = items[j], items[i]
     end
     
     -- Create item rows
