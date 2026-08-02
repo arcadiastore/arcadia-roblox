@@ -53,6 +53,16 @@ Items["wolf_fang"] = {
     sellPrice = 15,
 }
 
+-- Special Items
+Items["job_change_ticket"] = {
+    id = "job_change_ticket",
+    name = "Job Change Ticket",
+    description = "Tiket untuk mengganti job. Bicara dengan Job Master.",
+    type = "special",
+    price = 5000,
+    sellPrice = 2500,
+}
+
 -- Equipment
 Items["wooden_sword"] = {
     id = "wooden_sword",

@@ -33,6 +33,11 @@ function DialogueSystem:Talk(player, data, npcId, events)
     
     local npcData = GameData:GetNPC(npcId)
     
+    -- Special handling for JobMaster
+    if npcId == "JobMaster" then
+        return self:JobMasterTalk(player, data, npcId, npcData, events)
+    end
+    
     -- Check if quest ready to turn in
     local QuestSystem = require(script.Parent.QuestSystem)
     local readyQuestId, readyQuestData = QuestSystem:GetReadyQuest(data, npcId)
@@ -137,6 +142,72 @@ function DialogueSystem:Talk(player, data, npcId, events)
     return true
 end
 
+-- Special JobMaster dialogue handler
+function DialogueSystem:JobMasterTalk(player, data, npcId, npcData, events)
+    if data.job then
+        -- Player already has a job
+        local hasTicket = data.inventory and data.inventory["job_change_ticket"] and data.inventory["job_change_ticket"] > 0
+        
+        if hasTicket then
+            -- Has ticket: allow job change
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "change_job_confirm",
+            }
+            
+            events.DialogueEvent:FireClient(player, {
+                type = "Start",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = "Kamu sudah memilih job: " .. data.job .. "\n\nKamu punya Job Change Ticket! Mau ganti job? (Tiket akan digunakan)",
+                    responses = {
+                        {text = "Ya, saya mau ganti job!", next = "select_job"},
+                        {text = "Tidak, simpan tiketnya.", next = nil},
+                    },
+                },
+            })
+        else
+            -- No ticket: can't change
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "has_job",
+            }
+            
+            events.DialogueEvent:FireClient(player, {
+                type = "Start",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = "Kamu sudah memilih job: " .. data.job .. "\n\nUntuk mengganti job, kamu butuh Job Change Ticket. Beli di Shop atau cari dari quest!",
+                    responses = {
+                        {text = "Baik, saya mengerti.", next = nil},
+                    },
+                },
+            })
+        end
+        return true
+    end
+    
+    -- No job yet: normal job selection
+    playerDialogueState[player.UserId] = {
+        npcId = npcId,
+        currentNode = "greeting",
+    }
+    
+    local dialogueData = GameData:GetDialogue(npcId)
+    if not dialogueData then return false end
+    
+    local greeting = dialogueData.greeting
+    events.DialogueEvent:FireClient(player, {
+        type = "Start",
+        npcId = npcId,
+        npcName = npcData and npcData.name or npcId,
+        dialogue = greeting,
+    })
+    return true
+end
+
 -- Handle response
 function DialogueSystem:Respond(player, data, npcId, responseText, events)
     local state = playerDialogueState[player.UserId]
@@ -150,6 +221,37 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
         playerDialogueState[player.UserId] = nil
         events.DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
         return true
+    end
+    
+    -- Handle has_job state (player has job, no ticket)
+    if state.currentNode == "has_job" then
+        playerDialogueState[player.UserId] = nil
+        events.DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+        return true
+    end
+    
+    -- Handle change_job_confirm state
+    if state.currentNode == "change_job_confirm" then
+        if responseText == "Ya, saya mau ganti job!" then
+            -- Go to job selection
+            state.currentNode = "select_job"
+            local dialogueData = GameData:GetDialogue(npcId)
+            local selectNode = dialogueData and dialogueData.select_job
+            if selectNode then
+                events.DialogueEvent:FireClient(player, {
+                    type = "Continue",
+                    npcId = npcId,
+                    npcName = GameData:GetNPC(npcId) and GameData:GetNPC(npcId).name or npcId,
+                    dialogue = selectNode,
+                })
+            end
+            return true
+        else
+            -- Decline
+            playerDialogueState[player.UserId] = nil
+            events.DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+            return true
+        end
     end
     
     -- Handle quest completion
@@ -302,6 +404,31 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
     -- Check if response has action (e.g., select_job)
     if selected.action then
         if selected.action == "select_job" and selected.jobId then
+            -- Consume Job Change Ticket if player already has a job
+            if data.job then
+                local hasTicket = data.inventory and data.inventory["job_change_ticket"] and data.inventory["job_change_ticket"] > 0
+                if hasTicket then
+                    data.inventory["job_change_ticket"] = data.inventory["job_change_ticket"] - 1
+                    if data.inventory["job_change_ticket"] <= 0 then
+                        data.inventory["job_change_ticket"] = nil
+                    end
+                    print("[Dialogue] Job Change Ticket consumed for " .. player.Name)
+                else
+                    -- No ticket, reject
+                    events.DialogueEvent:FireClient(player, {
+                        type = "Continue",
+                        npcId = npcId,
+                        npcName = GameData:GetNPC(npcId) and GameData:GetNPC(npcId).name or npcId,
+                        dialogue = {
+                            text = "Kamu tidak punya Job Change Ticket! Beli di Shop atau cari dari quest.",
+                            responses = {{text = "Baik, saya mengerti.", next = nil}},
+                        },
+                    })
+                    playerDialogueState[player.UserId] = nil
+                    return true
+                end
+            end
+            
             local PlayerData = require(script.Parent.PlayerData)
             local success, msg = PlayerData:SetJob(player, selected.jobId, events)
             
