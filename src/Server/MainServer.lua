@@ -318,13 +318,25 @@ print("[Server] Shop system ready!")
 -- DIALOGUE SYSTEM
 -- ============================================
 
+-- Track current dialogue node per player
+local playerDialogueState = {}
+
 DialogueEvent.OnServerEvent:Connect(function(player, action, data)
+    local pData = playerData[player.UserId]
+    if not pData then return end
+    
     if action == "talk" then
         local npcId = data.npcId
         local dialogueData = GameData:GetDialogue(npcId)
         if not dialogueData then return end
         
         local npcData = GameData:GetNPC(npcId)
+        
+        -- Set current dialogue state to greeting
+        playerDialogueState[player.UserId] = {
+            npcId = npcId,
+            currentNode = "greeting",
+        }
         
         DialogueEvent:FireClient(player, {
             type = "Start",
@@ -333,48 +345,136 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             dialogue = dialogueData.greeting,
         })
         
+        print("[Server] " .. player.Name .. " started dialogue with " .. npcId)
+        
     elseif action == "respond" then
         local npcId = data.npcId
         local responseText = data.responseText
+        
+        -- Get current dialogue state
+        local state = playerDialogueState[player.UserId]
+        if not state or state.npcId ~= npcId then
+            warn("[Server] No dialogue state for " .. player.Name)
+            return
+        end
+        
         local dialogueData = GameData:GetDialogue(npcId)
         if not dialogueData then return end
         
-        -- Find current dialogue
-        local current = dialogueData.greeting
-        local selected = nil
+        -- Get current node
+        local currentNode = dialogueData[state.currentNode]
+        if not currentNode then
+            warn("[Server] Current node not found: " .. state.currentNode)
+            return
+        end
         
-        for _, resp in ipairs(current.responses) do
+        -- Find selected response
+        local selected = nil
+        for _, resp in ipairs(currentNode.responses) do
             if resp.text == responseText then
                 selected = resp
                 break
             end
         end
         
-        if not selected then return end
-        
-        -- Check if opens shop
-        if current.openShop then
-            ShopEvent:FireServer("open", {shopId = current.openShop})
+        if not selected then
+            warn("[Server] Response not found: " .. responseText)
             return
         end
         
-        -- Check if gives quest
-        if current.questId then
-            QuestEvent:FireServer("accept", {questId = current.questId})
-            return
-        end
+        print("[Server] " .. player.Name .. " selected: " .. responseText)
         
-        -- Go to next dialogue
+        -- Go to next dialogue node
         if selected.next then
-            local nextDialogue = dialogueData[selected.next]
-            if nextDialogue then
+            local nextNode = dialogueData[selected.next]
+            if nextNode then
+                -- Update state to next node
+                playerDialogueState[player.UserId] = {
+                    npcId = npcId,
+                    currentNode = selected.next,
+                }
+                
+                -- Check if next node opens shop
+                if nextNode.openShop then
+                    -- Send shop open, then end dialogue
+                    local shopData = GameData:GetShop(nextNode.openShop)
+                    if shopData then
+                        local shopItems = GameData:GetShopItems(nextNode.openShop)
+                        ShopEvent:FireClient(player, {
+                            type = "Open",
+                            shop = shopData,
+                            items = shopItems,
+                            gold = pData.gold,
+                        })
+                    end
+                    playerDialogueState[player.UserId] = nil
+                    DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+                    return
+                end
+                
+                -- Check if next node gives quest
+                if nextNode.questId then
+                    -- Accept quest
+                    local questData = GameData:GetQuest(nextNode.questId)
+                    if questData and not pData.activeQuests[nextNode.questId] and not pData.completedQuests[nextNode.questId] then
+                        -- Check prerequisite
+                        local canAccept = true
+                        if questData.prerequisite and not pData.completedQuests[questData.prerequisite] then
+                            canAccept = false
+                        end
+                        
+                        if canAccept then
+                            pData.activeQuests[nextNode.questId] = {
+                                id = nextNode.questId,
+                                progress = {},
+                            }
+                            for i, obj in ipairs(questData.objectives) do
+                                pData.activeQuests[nextNode.questId].progress[i] = 0
+                            end
+                            print("[Server] " .. player.Name .. " accepted quest: " .. nextNode.questId)
+                            
+                            -- Send quest accepted notification
+                            UpdateEvent:FireClient(player, {
+                                type = "QuestAccepted",
+                                questId = nextNode.questId,
+                                questName = questData.name,
+                            })
+                            
+                            -- Send update
+                            UpdateEvent:FireClient(player, {
+                                type = "Update",
+                                level = pData.level,
+                                exp = pData.exp,
+                                gold = pData.gold,
+                                hp = pData.hp,
+                                maxHp = pData.maxHp,
+                                atk = pData.atk,
+                                def = pData.def,
+                                activeQuests = pData.activeQuests,
+                                completedQuests = pData.completedQuests,
+                            })
+                        end
+                    end
+                    
+                    -- End dialogue after accepting quest
+                    playerDialogueState[player.UserId] = nil
+                    DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+                    return
+                end
+                
+                -- Normal dialogue - show next node
                 DialogueEvent:FireClient(player, {
                     type = "Continue",
                     npcId = npcId,
-                    dialogue = nextDialogue,
+                    npcName = GameData:GetNPC(npcId) and GameData:GetNPC(npcId).name or npcId,
+                    dialogue = nextNode,
                 })
+            else
+                warn("[Server] Next node not found: " .. selected.next)
             end
         else
+            -- End dialogue (no next)
+            playerDialogueState[player.UserId] = nil
             DialogueEvent:FireClient(player, {
                 type = "End",
                 npcId = npcId,
