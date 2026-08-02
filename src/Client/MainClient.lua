@@ -267,14 +267,18 @@ end)
 -- Keyboard shortcuts
 local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
+    -- Skip if typing in a TextBox
+    local focused = playerGui:FindFirstChildWhichIsA("TextBox", true)
+    if focused and focused:IsFocused() then return end
     
     if input.KeyCode == Enum.KeyCode.E then
+        print("[Client] E pressed")
         EquipmentUI:Toggle()
         if EquipmentUI:IsOpen() and InventoryUI:IsOpen() then
             InventoryUI:Toggle()
         end
     elseif input.KeyCode == Enum.KeyCode.I then
+        print("[Client] I pressed")
         InventoryUI:Toggle()
         if InventoryUI:IsOpen() and EquipmentUI:IsOpen() then
             EquipmentUI:Toggle()
