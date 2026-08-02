@@ -128,4 +128,24 @@ function GameData:CalculateMagicDamage(matk, skillMultiplier, mdef)
     return self.Formulas.magicDamage(matk, skillMultiplier, mdef)
 end
 
+-- Get attack range based on equipped weapon
+function GameData:GetAttackRange(playerData)
+    -- Default: fist range
+    local defaultRange = 6
+    
+    -- Check equipped weapon
+    local weapon1h = playerData.equipment and playerData.equipment.weapon1h
+    local weapon2h = playerData.equipment and playerData.equipment.weapon2h
+    
+    local weaponId = weapon2h or weapon1h  -- 2H takes priority
+    if weaponId then
+        local itemData = self.Items[weaponId]
+        if itemData and itemData.range then
+            return itemData.range
+        end
+    end
+    
+    return defaultRange
+end
+
 return GameData

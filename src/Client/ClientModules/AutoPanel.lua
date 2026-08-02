@@ -24,8 +24,11 @@ local autoQuestNPC = nil  -- NPC to report to
 local autoQuestId = nil  -- current quest ID
 
 local ATTACK_RANGE = 30  -- Find monsters within this range
-local MELEE_RANGE = 12   -- Must be this close to attack
+local MELEE_RANGE = 8    -- Default fist range (overridden by weapon)
 local NPC_INTERACT_RANGE = 20
+
+-- Current weapon range (updated from server)
+local currentWeaponRange = 8
 
 -- Get GameData
 local function getGameData()
@@ -191,7 +194,7 @@ local function autoQuestLoop()
             
             if currentTarget then
                 local dist = getDistTo(currentTarget.Position)
-                if dist <= MELEE_RANGE then
+                if dist <= currentWeaponRange then
                     stopMoving()
                     local AttackEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AttackEvent")
                     if AttackEvent then
@@ -283,7 +286,7 @@ local function autoCombatLoop()
                 local humanoid = character:FindFirstChild("Humanoid")
                 if rootPart and humanoid then
                     local dist = (currentTarget.Position - rootPart.Position).Magnitude
-                    if dist <= MELEE_RANGE then
+                    if dist <= currentWeaponRange then
                         stopMoving()
                         local AttackEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AttackEvent")
                         if AttackEvent then
@@ -400,6 +403,22 @@ function AutoPanel:Create(playerGui)
 end
 
 function AutoPanel:Update(data)
+    -- Update weapon range from equipped items
+    if data.equipment then
+        local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
+        local weaponId = data.equipment.weapon2h or data.equipment.weapon1h
+        if weaponId then
+            local itemData = GameData:GetItem(weaponId)
+            if itemData and itemData.range then
+                currentWeaponRange = itemData.range
+            else
+                currentWeaponRange = 8  -- default melee
+            end
+        else
+            currentWeaponRange = 6  -- fist
+        end
+    end
+    
     -- Check quest completion from server data
     if autoQuestActive and autoQuestId and data.activeQuests then
         local quest = data.activeQuests[autoQuestId]

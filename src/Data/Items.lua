@@ -131,8 +131,9 @@ Items["wooden_sword"] = {
     price = 100,
     sellPrice = 50,
     levelReq = 1,
-    jobReq = nil,  -- semua job
+    jobReq = nil,
     stats = {atk = 5},
+    range = 8,  -- melee
 }
 
 Items["iron_sword"] = {
@@ -146,6 +147,7 @@ Items["iron_sword"] = {
     levelReq = 5,
     jobReq = nil,
     stats = {atk = 12},
+    range = 8,  -- melee
 }
 
 Items["steel_sword"] = {
@@ -159,6 +161,7 @@ Items["steel_sword"] = {
     levelReq = 10,
     jobReq = {"Warrior", "Archer"},
     stats = {atk = 25, spd = 2},
+    range = 8,  -- melee
 }
 
 Items["hunting_dagger"] = {
@@ -172,6 +175,7 @@ Items["hunting_dagger"] = {
     levelReq = 3,
     jobReq = {"Archer"},
     stats = {atk = 8, spd = 3},
+    range = 6,  -- melee (short)
 }
 
 -- ============================================
@@ -189,6 +193,7 @@ Items["wooden_staff"] = {
     levelReq = 1,
     jobReq = {"Mage"},
     stats = {matk = 8, mp = 10},
+    range = 25,  -- ranged (magic)
 }
 
 Items["iron_staff"] = {
@@ -202,6 +207,7 @@ Items["iron_staff"] = {
     levelReq = 5,
     jobReq = {"Mage"},
     stats = {matk = 18, mp = 25},
+    range = 25,  -- ranged (magic)
 }
 
 Items["great_axe"] = {
@@ -215,6 +221,7 @@ Items["great_axe"] = {
     levelReq = 7,
     jobReq = {"Warrior"},
     stats = {atk = 30, def = -3},
+    range = 10,  -- melee (heavy)
 }
 
 Items["longbow"] = {
@@ -228,6 +235,7 @@ Items["longbow"] = {
     levelReq = 5,
     jobReq = {"Archer"},
     stats = {atk = 15, spd = 5},
+    range = 30,  -- ranged (bow)
 }
 
 -- ============================================
