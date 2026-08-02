@@ -91,7 +91,7 @@ UpdateEvent.OnClientEvent:Connect(function(data)
                     print("[Client]   Child: " .. child.Name .. " (" .. child.ClassName .. ")")
                 end
                 -- Update HP label
-                local billboard = monsterPart:FindFirstChild("BillboardGui")
+                local billboard = monsterPart:FindFirstChild("NameTag")
                 if billboard then
                     local hpLabel = billboard:FindFirstChild("HPLabel")
                     if hpLabel then
