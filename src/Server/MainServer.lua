@@ -107,6 +107,8 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
     monsterHP = monsterHP - damage
     monsterPart:SetAttribute("CurrentHP", monsterHP)
     
+    print("[Combat] " .. player.Name .. " hit " .. monsterId .. " DMG:" .. damage .. " HP:" .. monsterHP .. "/" .. monsterData.hp)
+    
     -- Send feedback to client
     UpdateEvent:FireClient(player, {
         type = "Damage",
@@ -122,7 +124,7 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
         
         print("[Server] " .. player.Name .. " killed " .. monsterId .. " +" .. monsterData.exp .. "EXP +" .. monsterData.gold .. "G")
         
-        -- Update quest progress
+        -- Update quest progress (ONLY ON DEATH!)
         for questId, quest in pairs(data.activeQuests) do
             local questData = GameData:GetQuest(questId)
             if questData then
@@ -147,7 +149,6 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
                     end
                 end
                 if complete then
-                    -- Mark quest as ready to complete (not auto-complete!)
                     quest.readyToComplete = true
                     print("[Server] Quest ready to turn in: " .. questId)
                 end
@@ -181,18 +182,19 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
             completedQuests = data.completedQuests,
         })
         
+        -- Hide monster
+        monsterPart.Transparency = 1
+        monsterPart.CanCollide = false
+        
         -- Respawn monster
         task.delay(monsterData.respawnTime, function()
             if monsterPart and monsterPart.Parent then
                 monsterPart:SetAttribute("CurrentHP", monsterData.hp)
                 monsterPart.Transparency = 0
                 monsterPart.CanCollide = true
+                print("[Server] Monster respawned: " .. monsterId)
             end
         end)
-        
-        -- Hide monster
-        monsterPart.Transparency = 1
-        monsterPart.CanCollide = false
     end
 end)
 
