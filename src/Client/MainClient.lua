@@ -137,12 +137,12 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         Notification:QuestCompleted(data.questName, data.rewards)
         
     elseif data.type == "QuestReady" then
-        Notification:QuestReady(data.questName)
         AutoPanel:QuestReady(data.questId)
         local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
         local npcData = GameData:GetNPC(data.npcName)
-        local npcName = npcData and npcData.name or data.npcName
-        Notification:QuestReady(data.questName, npcName)
+        local npcName = npcData and npcData.name or tostring(data.npcName)
+        local questName = data.questName or "Quest"
+        Notification:QuestReady(questName, npcName)
         
     elseif data.type == "MonsterRespawn" then
         -- Reset HP display on respawned monster

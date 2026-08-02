@@ -139,10 +139,10 @@ local function interactNPC(npcId)
 end
 
 -- Send dialogue response
-local function sendResponse(text)
+local function sendResponse(text, npcId)
     local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
-    if DialogueEvent then
-        DialogueEvent:FireServer("respond", {response = text})
+    if DialogueEvent and npcId then
+        DialogueEvent:FireServer("respond", {responseText = text, npcId = npcId})
     end
 end
 
@@ -150,22 +150,22 @@ end
 local function doReporting(npcId, questId)
     -- Step 1: Talk to NPC (must succeed to establish dialogue state)
     interactNPC(npcId)
-    task.wait(1.5)  -- Wait for dialogue state to establish
+    task.wait(1.5)
     
     -- Step 2: Try quest completion responses
-    sendResponse("Ambil reward!")
+    sendResponse("Terima kasih! (Ambil Reward)", npcId)
     task.wait(1)
-    sendResponse("Terima kasih!")
+    sendResponse("Terima kasih!", npcId)
     task.wait(1)
     
     -- Step 3: Try accept new quest
-    sendResponse("Saya terima quest ini!")
+    sendResponse("Saya terima quest ini!", npcId)
     task.wait(1)
-    sendResponse("Baik!")
+    sendResponse("Saya akan membantu!", npcId)
     task.wait(1)
     
     -- Step 4: Exit dialogue
-    sendResponse("exit")
+    sendResponse("exit", npcId)
     task.wait(0.5)
     
     print("[AutoPanel] Reporting done for quest: " .. tostring(questId))
