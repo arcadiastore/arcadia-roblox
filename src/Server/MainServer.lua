@@ -182,9 +182,21 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
             completedQuests = data.completedQuests,
         })
         
-        -- Hide monster
+        -- Hide monster AND disable click
         monsterPart.Transparency = 1
         monsterPart.CanCollide = false
+        
+        -- Disable ClickDetector
+        local clickDetector = monsterPart:FindFirstChild("ClickDetector")
+        if clickDetector then
+            clickDetector.MaxActivationDistance = 0
+        end
+        
+        -- Also hide name tag if exists
+        local billboard = monsterPart:FindFirstChild("BillboardGui")
+        if billboard then
+            billboard.Enabled = false
+        end
         
         -- Respawn monster
         task.delay(monsterData.respawnTime, function()
@@ -192,6 +204,17 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
                 monsterPart:SetAttribute("CurrentHP", monsterData.hp)
                 monsterPart.Transparency = 0
                 monsterPart.CanCollide = true
+                
+                -- Re-enable ClickDetector
+                if clickDetector then
+                    clickDetector.MaxActivationDistance = 20
+                end
+                
+                -- Re-enable name tag
+                if billboard then
+                    billboard.Enabled = true
+                end
+                
                 print("[Server] Monster respawned: " .. monsterId)
             end
         end)
