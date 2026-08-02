@@ -148,29 +148,37 @@ end
 
 -- Report quest and accept next
 local function doReporting(npcId, questId)
-    -- Step 1: Talk to NPC (establishes dialogue state)
+    -- Step 1: Talk to NPC
     interactNPC(npcId)
-    task.wait(2)  -- Wait for dialogue state
+    task.wait(2)
     
-    -- Step 2: Complete quest - take reward
+    -- Step 2: Say we completed the task
+    sendResponse("Saya sudah menyelesaikan tugasnya!", npcId)
+    task.wait(1.5)
+    
+    -- Step 3: Take reward
     sendResponse("Terima kasih! (Ambil Reward)", npcId)
     task.wait(1.5)
     
-    -- Step 3: Close any remaining dialogue
+    -- Step 4: Close
     sendResponse("Sama-sama!", npcId)
     task.wait(1)
     sendResponse("exit", npcId)
-    task.wait(1)
+    task.wait(1.5)
     
-    -- Step 4: Talk again to accept new quest
+    -- Step 5: Talk again for new quest
     interactNPC(npcId)
     task.wait(2)
-    sendResponse("Saya terima quest ini!", npcId)
-    task.wait(1)
-    sendResponse("Saya akan membantu!", npcId)
+    
+    -- Step 6: Ask for quest
+    sendResponse("Ada tugas untuk saya?", npcId)
+    task.wait(1.5)
+    
+    -- Step 7: Accept quest (exact text with checkmark)
+    sendResponse("✓ Saya terima quest ini!", npcId)
     task.wait(1)
     sendResponse("exit", npcId)
-    task.wait(0.5)
+    task.wait(1)
     
     print("[AutoPanel] Reporting done for quest: " .. tostring(questId))
 end
