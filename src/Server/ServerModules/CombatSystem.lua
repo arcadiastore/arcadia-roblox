@@ -44,6 +44,25 @@ function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
     monsterHP = monsterHP - damage
     monsterPart:SetAttribute("CurrentHP", monsterHP)
     
+    -- Update HP bar visual (BillboardGui)
+    local billboard = monsterPart:FindFirstChild("BillboardGui")
+    if billboard then
+        for _, child in ipairs(billboard:GetChildren()) do
+            if child:IsA("TextLabel") and child.Position.Y.Scale > 0.4 then
+                child.Text = "HP: " .. math.max(0, monsterHP) .. "/" .. monsterData.hp
+                -- Color: green > yellow > red
+                local pct = monsterHP / monsterData.hp
+                if pct > 0.5 then
+                    child.TextColor3 = Color3.fromRGB(50, 255, 50)
+                elseif pct > 0.25 then
+                    child.TextColor3 = Color3.fromRGB(255, 255, 50)
+                else
+                    child.TextColor3 = Color3.fromRGB(255, 50, 50)
+                end
+            end
+        end
+    end
+    
     print("[Combat] " .. player.Name .. " hit " .. monsterId .. " DMG:" .. damage .. " HP:" .. monsterHP .. "/" .. monsterData.hp)
     
     -- Send damage feedback to client
@@ -139,6 +158,13 @@ function CombatSystem:OnMonsterDeath(player, monsterPart, monsterId, monsterData
             end
             if billboard then
                 billboard.Enabled = true
+                -- Reset HP text
+                for _, child in ipairs(billboard:GetChildren()) do
+                    if child:IsA("TextLabel") and child.Position.Y.Scale > 0.4 then
+                        child.Text = "HP: " .. monsterData.hp .. "/" .. monsterData.hp
+                        child.TextColor3 = Color3.fromRGB(50, 255, 50)
+                    end
+                end
             end
             
             print("[Combat] Monster respawned: " .. monsterId)
