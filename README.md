@@ -1,5 +1,27 @@
 # Arcadia Online - Roblox MMORPG
 
+## ⚠️ GOLDEN RULE: NO HARDCODING
+
+**SEMUA data game harus dari `GameData` module!**
+
+```lua
+-- ✅ BENAR: Baca dari GameData
+local GameData = require(ReplicatedStorage.GameData)
+local slime = GameData:GetMonster("Slime")
+local sword = GameData:GetItem("iron_sword")
+
+-- ❌ SALAH: Hardcode di script
+local hp = 50  -- JANGAN!
+local name = "Slime"  -- JANGAN!
+```
+
+**Kenapa?**
+- Mudah tambah/kurang content
+- Satu sumber kebenaran
+- Tidak perlu edit banyak file
+
+---
+
 ## Overview
 **Arcadia Online** adalah MMORPG anime-style yang dibangun di Roblox Studio. Game ini terinspirasi dari MMORPG klasik dengan sentuhan modern dan grafis stylized.
 
