@@ -1,7 +1,8 @@
 # Arcadia Online - Roblox MMORPG
 
-## ⚠️ GOLDEN RULE: NO HARDCODING
+## ⚠️ GOLDEN RULES (WAJIB IKUTI)
 
+### 1. NO HARDCODING
 **SEMUA data game harus dari `GameData` module!**
 
 ```lua
@@ -19,6 +20,39 @@ local name = "Slime"  -- JANGAN!
 - Mudah tambah/kurang content
 - Satu sumber kebenaran
 - Tidak perlu edit banyak file
+
+### 2. ONLINE GAME (MULTIPLAYER)
+**Ini adalah game ONLINE — Roblox adalah platform multiplayer!**
+
+```lua
+-- ✅ BENAR: Server authoritative
+-- Semua validasi di server
+local function handleAttack(player, target)
+    -- Server validates everything
+    local playerData = getPlayerData(player)
+    if isValidTarget(target) then
+        -- Process attack
+    end
+end
+
+-- ❌ SALAH: Client-side validation
+-- Client bisa di-hack!
+```
+
+**Arsitektur:**
+- **Server**: Game logic, data validation, anti-cheat
+- **Client**: UI, input, visual effects only
+- **RemoteEvents**: Komunikasi client ↔ server
+- **DataStore**: Simpan data player
+
+### 3. MULTIPLAYER-FIRST DESIGN
+**SEMUA keputusan harus mempertimbangkan multiplayer!**
+
+- **Player data**: Per-player (inventory, quest, gold)
+- **Shared state**: Monster, NPC, World (server-managed)
+- **Concurrent access**: Handle banyak player sekaligus
+- **Latency**: Design untuk network delay
+- **Anti-cheat**: Jangan trust client
 
 ---
 
