@@ -93,6 +93,18 @@ Players.PlayerRemoving:Connect(function(player)
     PlayerData:Remove(player)
 end)
 
+-- Init players who joined BEFORE this script connected
+for _, player in ipairs(Players:GetPlayers()) do
+    if not PlayerData:Get(player) then
+        print("[Server] Late init for: " .. player.Name)
+        PlayerData:Init(player)
+        if player.Character then
+            task.wait(1)
+            PlayerData:SendUpdate(player, events)
+        end
+    end
+end
+
 print("[Server] Player connections ready!")
 
 -- ============================================
@@ -102,6 +114,11 @@ print("[Server] Player connections ready!")
 -- Combat
 AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
     print("[Server] AttackEvent received from " .. player.Name)
+    local pData = PlayerData:Get(player)
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
     CombatSystem:HandleAttack(player, monsterPart, PlayerData, events)
 end)
 
@@ -109,7 +126,11 @@ end)
 ShopEvent.OnServerEvent:Connect(function(player, action, data)
     print("[Server] ShopEvent: " .. player.Name .. " -> " .. action)
     local pData = PlayerData:Get(player)
-    if not pData then warn("[Server] No player data!") return end
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then warn("[Server] Still no player data!") return end
     
     if action == "open" then
         ShopSystem:OpenShop(player, pData, data.shopId, events)
@@ -122,7 +143,11 @@ end)
 QuestEvent.OnServerEvent:Connect(function(player, action, data)
     print("[Server] QuestEvent: " .. player.Name .. " -> " .. action)
     local pData = PlayerData:Get(player)
-    if not pData then warn("[Server] No player data!") return end
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then warn("[Server] Still no player data!") return end
     
     if action == "accept" then
         QuestSystem:AcceptQuest(player, pData, data.questId, events)
@@ -133,7 +158,12 @@ end)
 DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     print("[Server] DialogueEvent: " .. player.Name .. " -> " .. action .. " -> " .. tostring(data.npcId))
     local pData = PlayerData:Get(player)
-    if not pData then warn("[Server] No player data!") return end
+    if not pData then
+        warn("[Server] No player data for " .. player.Name .. " - auto initializing...")
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then warn("[Server] Still no player data!") return end
     
     if action == "talk" then
         local result = DialogueSystem:Talk(player, pData, data.npcId, events)
