@@ -215,6 +215,9 @@ function PlayerData:SetJob(player, jobId, events)
     data.hp = data.maxHp
     data.mp = data.maxMp
     
+    -- Check level up (player might have enough EXP)
+    self:CheckLevelUp(player, events)
+    
     -- Send update
     self:SendUpdate(player, events)
     

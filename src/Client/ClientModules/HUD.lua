@@ -136,8 +136,11 @@ function HUD:Update(data)
     hpLabel.Text = "HP: " .. data.hp .. "/" .. data.maxHp
     mpLabel.Text = "MP: " .. (data.mp or 50) .. "/" .. (data.maxMp or 50)
     
-    -- Calculate EXP needed for next level
-    local expNeeded = math.floor(100 * (1.5 ^ (data.level - 1)))
+    -- Calculate EXP needed for next level (matches server formula)
+    local expNeeded = 100
+    if data.level >= 2 then
+        expNeeded = 100 * math.pow(2, data.level - 1)
+    end
     expLabel.Text = "EXP: " .. data.exp .. " / " .. expNeeded
     
     goldLabel.Text = "Gold: " .. data.gold
