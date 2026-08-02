@@ -143,6 +143,35 @@ questList.Parent = questFrame
 print("[Client] Quest tracker created!")
 
 -- ============================================
+-- NOTIFICATION (tengah atas, auto hide)
+-- ============================================
+
+local notificationFrame = Instance.new("Frame")
+notificationFrame.Size = UDim2.new(0, 400, 0, 60)
+notificationFrame.Position = UDim2.new(0.5, -200, 0.15, 0)
+notificationFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+notificationFrame.BackgroundTransparency = 0.2
+notificationFrame.BorderSizePixel = 0
+notificationFrame.Visible = false
+notificationFrame.Parent = gui
+
+Instance.new("UICorner", notificationFrame).CornerRadius = UDim.new(0, 10)
+
+local notificationLabel = Instance.new("TextLabel")
+notificationLabel.Size = UDim2.new(1, -20, 1, 0)
+notificationLabel.Position = UDim2.new(0, 10, 0, 0)
+notificationLabel.BackgroundTransparency = 1
+notificationLabel.Text = ""
+notificationLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+notificationLabel.TextStrokeTransparency = 0
+notificationLabel.Font = Enum.Font.GothamBold
+notificationLabel.TextScaled = true
+notificationLabel.TextWrapped = true
+notificationLabel.Parent = notificationFrame
+
+print("[Client] Notification system created!")
+
+-- ============================================
 -- SHOP UI (tengah, hidden)
 -- ============================================
 
@@ -307,6 +336,22 @@ UpdateEvent.OnClientEvent:Connect(function(data)
             end
         end
         questList.Text = questText ~= "" and questText or "No active quests"
+        
+    elseif data.type == "QuestAccepted" then
+        notificationLabel.Text = "Quest Accepted: " .. data.questName
+        notificationLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        notificationFrame.Visible = true
+        task.delay(3, function()
+            notificationFrame.Visible = false
+        end)
+        
+    elseif data.type == "QuestCompleted" then
+        notificationLabel.Text = "Quest Complete!\n" .. data.questName .. "\nReward: " .. data.rewards
+        notificationLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+        notificationFrame.Visible = true
+        task.delay(5, function()
+            notificationFrame.Visible = false
+        end)
     end
 end)
 

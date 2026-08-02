@@ -147,11 +147,9 @@ AttackEvent.OnServerEvent:Connect(function(player, monsterPart)
                     end
                 end
                 if complete then
-                    data.completedQuests[questId] = true
-                    data.activeQuests[questId] = nil
-                    data.exp = data.exp + questData.rewards.exp
-                    data.gold = data.gold + questData.rewards.gold
-                    print("[Server] Quest completed: " .. questId)
+                    -- Mark quest as ready to complete (not auto-complete!)
+                    quest.readyToComplete = true
+                    print("[Server] Quest ready to turn in: " .. questId)
                 end
             end
         end
@@ -321,6 +319,86 @@ print("[Server] Shop system ready!")
 -- Track current dialogue node per player
 local playerDialogueState = {}
 
+-- Check if player has quest ready to turn in for this NPC
+local function getReadyQuest(playerData, npcId)
+    for questId, quest in pairs(playerData.activeQuests) do
+        if quest.readyToComplete then
+            local questData = GameData:GetQuest(questId)
+            if questData and questData.giver == npcId then
+                return questId, questData
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- Complete quest and give rewards
+local function completeQuest(player, pData, questId, questData)
+    -- Mark as completed
+    pData.completedQuests[questId] = true
+    pData.activeQuests[questId] = nil
+    
+    -- Give rewards
+    local rewards = questData.rewards
+    local rewardText = ""
+    
+    if rewards.exp then
+        pData.exp = pData.exp + rewards.exp
+        rewardText = rewardText .. "+" .. rewards.exp .. " EXP"
+    end
+    
+    if rewards.gold then
+        pData.gold = pData.gold + rewards.gold
+        if rewardText ~= "" then rewardText = rewardText .. ", " end
+        rewardText = rewardText .. "+" .. rewards.gold .. " Gold"
+    end
+    
+    if rewards.items then
+        for _, item in ipairs(rewards.items) do
+            pData.inventory[item.itemId] = (pData.inventory[item.itemId] or 0) + item.count
+            if rewardText ~= "" then rewardText = rewardText .. ", " end
+            rewardText = rewardText .. item.itemId .. " x" .. item.count
+        end
+    end
+    
+    print("[Server] " .. player.Name .. " completed quest: " .. questId .. " - Rewards: " .. rewardText)
+    
+    -- Check level up
+    local expNeeded = GameData:CalculateExpForLevel(pData.level + 1)
+    while pData.exp >= expNeeded do
+        pData.exp = pData.exp - expNeeded
+        pData.level = pData.level + 1
+        pData.maxHp = pData.maxHp + 10
+        pData.hp = pData.maxHp
+        pData.atk = pData.atk + 2
+        pData.def = pData.def + 1
+        expNeeded = GameData:CalculateExpForLevel(pData.level + 1)
+        print("[Server] " .. player.Name .. " level up! Lv." .. pData.level)
+    end
+    
+    -- Send reward notification
+    UpdateEvent:FireClient(player, {
+        type = "QuestCompleted",
+        questId = questId,
+        questName = questData.name,
+        rewards = rewardText,
+    })
+    
+    -- Send update
+    UpdateEvent:FireClient(player, {
+        type = "Update",
+        level = pData.level,
+        exp = pData.exp,
+        gold = pData.gold,
+        hp = pData.hp,
+        maxHp = pData.maxHp,
+        atk = pData.atk,
+        def = pData.def,
+        activeQuests = pData.activeQuests,
+        completedQuests = pData.completedQuests,
+    })
+end
+
 DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     local pData = playerData[player.UserId]
     if not pData then return end
@@ -332,20 +410,47 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
         
         local npcData = GameData:GetNPC(npcId)
         
-        -- Set current dialogue state to greeting
-        playerDialogueState[player.UserId] = {
-            npcId = npcId,
-            currentNode = "greeting",
-        }
+        -- CHECK: Does player have quest ready to turn in?
+        local readyQuestId, readyQuestData = getReadyQuest(pData, npcId)
         
-        DialogueEvent:FireClient(player, {
-            type = "Start",
-            npcId = npcId,
-            npcName = npcData and npcData.name or npcId,
-            dialogue = dialogueData.greeting,
-        })
-        
-        print("[Server] " .. player.Name .. " started dialogue with " .. npcId)
+        if readyQuestId and readyQuestData then
+            -- Show quest complete dialogue
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "quest_complete",
+                questId = readyQuestId,
+            }
+            
+            DialogueEvent:FireClient(player, {
+                type = "Start",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = "Bagus sekali! Kau telah menyelesaikan tugasmu! Terimalah hadiah ini!",
+                    responses = {
+                        {text = "Terima kasih! (Ambil Reward)", next = "complete"},
+                        {text = "Nanti saja.", next = nil},
+                    },
+                },
+            })
+            
+            print("[Server] " .. player.Name .. " - showing quest turn in for " .. readyQuestId)
+        else
+            -- Normal greeting
+            playerDialogueState[player.UserId] = {
+                npcId = npcId,
+                currentNode = "greeting",
+            }
+            
+            DialogueEvent:FireClient(player, {
+                type = "Start",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = dialogueData.greeting,
+            })
+            
+            print("[Server] " .. player.Name .. " started dialogue with " .. npcId)
+        end
         
     elseif action == "respond" then
         local npcId = data.npcId
@@ -358,6 +463,21 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
             return
         end
         
+        -- Handle quest completion
+        if state.currentNode == "quest_complete" and state.questId then
+            -- Complete the quest
+            local questData = GameData:GetQuest(state.questId)
+            if questData then
+                completeQuest(player, pData, state.questId, questData)
+            end
+            
+            -- End dialogue
+            playerDialogueState[player.UserId] = nil
+            DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
+            return
+        end
+        
+        -- Normal dialogue flow
         local dialogueData = GameData:GetDialogue(npcId)
         if not dialogueData then return end
         
@@ -396,7 +516,6 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                 
                 -- Check if next node opens shop
                 if nextNode.openShop then
-                    -- Send shop open, then end dialogue
                     local shopData = GameData:GetShop(nextNode.openShop)
                     if shopData then
                         local shopItems = GameData:GetShopItems(nextNode.openShop)
@@ -414,10 +533,8 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                 
                 -- Check if next node gives quest
                 if nextNode.questId then
-                    -- Accept quest
                     local questData = GameData:GetQuest(nextNode.questId)
                     if questData and not pData.activeQuests[nextNode.questId] and not pData.completedQuests[nextNode.questId] then
-                        -- Check prerequisite
                         local canAccept = true
                         if questData.prerequisite and not pData.completedQuests[questData.prerequisite] then
                             canAccept = false
@@ -427,20 +544,19 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                             pData.activeQuests[nextNode.questId] = {
                                 id = nextNode.questId,
                                 progress = {},
+                                readyToComplete = false,
                             }
                             for i, obj in ipairs(questData.objectives) do
                                 pData.activeQuests[nextNode.questId].progress[i] = 0
                             end
                             print("[Server] " .. player.Name .. " accepted quest: " .. nextNode.questId)
                             
-                            -- Send quest accepted notification
                             UpdateEvent:FireClient(player, {
                                 type = "QuestAccepted",
                                 questId = nextNode.questId,
                                 questName = questData.name,
                             })
                             
-                            -- Send update
                             UpdateEvent:FireClient(player, {
                                 type = "Update",
                                 level = pData.level,
@@ -456,7 +572,6 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
                         end
                     end
                     
-                    -- End dialogue after accepting quest
                     playerDialogueState[player.UserId] = nil
                     DialogueEvent:FireClient(player, {type = "End", npcId = npcId})
                     return
