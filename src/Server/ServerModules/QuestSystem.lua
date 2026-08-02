@@ -86,6 +86,10 @@ function QuestSystem:AcceptQuest(player, data, questId, events)
         questName = questData.name,
     })
     
+    -- Send full update to refresh quest tracker
+    local PlayerData = require(script.Parent.PlayerData)
+    PlayerData:SendUpdate(player, events)
+    
     return true
 end
 
