@@ -106,6 +106,7 @@ local function autoCombatLoop()
             local hp = currentTarget:GetAttribute("CurrentHP") or 0
             if hp <= 0 or not currentTarget.Parent then
                 currentTarget = nil  -- Target dead, find new one
+                stopMoving()
             end
         end
         
@@ -124,7 +125,8 @@ local function autoCombatLoop()
             local character = player.Character
             if character then
                 local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if rootPart and humanoid then
                     local dist = (currentTarget.Position - rootPart.Position).Magnitude
                     if dist <= 15 then
                         -- In range: attack
@@ -134,17 +136,18 @@ local function autoCombatLoop()
                             AttackEvent:FireServer(currentTarget)
                         end
                     else
-                        -- Move closer
-                        moveToward(currentTarget.Position)
+                        -- Move closer (keep calling MoveTo)
+                        humanoid:MoveTo(currentTarget.Position)
                     end
                 end
             end
         end
         
-        task.wait(ATTACK_INTERVAL)
+        task.wait(0.3)  -- Check more frequently for responsive movement
     end
     
     currentTarget = nil
+    stopMoving()
 end
 
 -- Start auto quest (called when clicking quest in tracker)
