@@ -7,24 +7,21 @@
     @version 1.0.0
 ]]
 
-local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 
 local SaveManager = {}
 SaveManager.__index = SaveManager
 
--- DataStore
-local playerDataStore = DataStoreService:GetDataStore("ArcadiaOnline_PlayerData_v1")
+-- DataStore (lazy load to avoid Studio errors)
+local DataStoreService = nil
+local playerDataStore = nil
 
 -- Default player data
 local DEFAULT_DATA = {
-    -- Player info
     level = 1,
     exp = 0,
     gold = 100,
-    job = nil,  -- Will be set during character creation
-    
-    -- Stats
+    job = nil,
     stats = {
         STR = 0,
         AGI = 0,
@@ -33,29 +30,19 @@ local DEFAULT_DATA = {
         DEX = 0,
         LUK = 0,
     },
-    
-    -- Inventory
     inventory = {
-        items = {},  -- { {itemId, amount}, ... }
-        equipment = {},  -- { slot = itemId }
+        items = {},
+        equipment = {},
     },
-    
-    -- Quests
     quests = {
-        active = {},  -- { questId = { objectives = {...} } }
+        active = {},
         completed = {},
     },
-    
-    -- Position
     position = { x = 0, y = 5, z = 0 },
-    
-    -- Settings
     settings = {
         musicVolume = 0.5,
         sfxVolume = 0.5,
     },
-    
-    -- Timestamps
     firstJoin = 0,
     lastJoin = 0,
     playTime = 0,
@@ -64,15 +51,49 @@ local DEFAULT_DATA = {
 function SaveManager.new()
     local self = setmetatable({}, SaveManager)
     
-    self.playerData = {}  -- Cached player data
-    self.autoSaveInterval = 300  -- 5 minutes
+    self.playerData = {}
+    self.autoSaveInterval = 300
+    self.isStudio = game:GetService("RunService"):IsStudio()
+    
+    -- Try to initialize DataStore
+    self:InitDataStore()
     
     return self
+end
+
+-- Initialize DataStore safely
+function SaveManager:InitDataStore()
+    if self.isStudio then
+        warn("[SaveManager] Running in Studio - DataStore disabled")
+        return
+    end
+    
+    local success, result = pcall(function()
+        DataStoreService = game:GetService("DataStoreService")
+        playerDataStore = DataStoreService:GetDataStore("ArcadiaOnline_PlayerData_v1")
+    end)
+    
+    if success then
+        print("[SaveManager] DataStore initialized")
+    else
+        warn("[SaveManager] DataStore not available: " .. tostring(result))
+    end
 end
 
 -- Load player data
 function SaveManager:LoadPlayer(player)
     local userId = player.UserId
+    
+    -- In Studio, use default data
+    if self.isStudio or not playerDataStore then
+        self.playerData[userId] = self:CreateDefaultData()
+        self.playerData[userId].firstJoin = os.time()
+        self.playerData[userId].lastJoin = os.time()
+        print("[SaveManager] Using default data for: " .. player.Name)
+        return self.playerData[userId]
+    end
+    
+    -- Try to load from DataStore
     local key = "Player_" .. userId
     
     local success, data = pcall(function()
@@ -80,11 +101,9 @@ function SaveManager:LoadPlayer(player)
     end)
     
     if success and data then
-        -- Merge with defaults (in case new fields were added)
         self.playerData[userId] = self:MergeWithDefaults(data)
         print("[SaveManager] Loaded data for: " .. player.Name)
     else
-        -- New player
         self.playerData[userId] = self:CreateDefaultData()
         self.playerData[userId].firstJoin = os.time()
         print("[SaveManager] New player: " .. player.Name)
@@ -98,12 +117,18 @@ end
 -- Save player data
 function SaveManager:SavePlayer(player)
     local userId = player.UserId
-    local key = "Player_" .. userId
     
     if not self.playerData[userId] then
-        warn("[SaveManager] No data to save for: " .. player.Name)
         return false
     end
+    
+    -- In Studio, skip saving
+    if self.isStudio or not playerDataStore then
+        print("[SaveManager] Studio mode - skipping save for: " .. player.Name)
+        return true
+    end
+    
+    local key = "Player_" .. userId
     
     local success, err = pcall(function()
         playerDataStore:SetAsync(key, self.playerData[userId])
@@ -206,24 +231,6 @@ function SaveManager:SaveAllPlayers()
     end
 end
 
--- Delete player data (admin only)
-function SaveManager:DeletePlayerData(userId)
-    local key = "Player_" .. userId
-    
-    local success, err = pcall(function()
-        playerDataStore:RemoveAsync(key)
-    end)
-    
-    if success then
-        self.playerData[userId] = nil
-        print("[SaveManager] Deleted data for user: " .. userId)
-        return true
-    else
-        warn("[SaveManager] Failed to delete: " .. tostring(err))
-        return false
-    end
-end
-
 -- Setup player connections
 function SaveManager:SetupConnections()
     Players.PlayerAdded:Connect(function(player)
@@ -238,6 +245,9 @@ function SaveManager:SetupConnections()
     game:BindToClose(function()
         self:SaveAllPlayers()
     end)
+    
+    -- Start auto-save
+    self:StartAutoSave()
 end
 
-return SaveManager.new()
+return SaveManager

@@ -111,9 +111,6 @@ function GameManager:OnPlayerAdded(player)
     -- Store player data
     self.state.Players[player.UserId] = playerData
     
-    -- Load saved data (if exists)
-    self:LoadPlayerData(player)
-    
     -- Setup character
     self:SetupCharacter(player)
 end
@@ -121,9 +118,6 @@ end
 -- Handle player leaving
 function GameManager:OnPlayerRemoving(player)
     print("[GameManager] Player left: " .. player.Name)
-    
-    -- Save player data
-    self:SavePlayerData(player)
     
     -- Remove from state
     self.state.Players[player.UserId] = nil
@@ -153,56 +147,9 @@ function GameManager:SetupCharacterStats(player, character)
     end
 end
 
--- Load player data from DataStore
-function GameManager:LoadPlayerData(player)
-    local DataStoreService = game:GetService("DataStoreService")
-    local dataStore = DataStoreService:GetDataStore("PlayerData")
-    
-    local success, data = pcall(function()
-        return dataStore:GetAsync("Player_" .. player.UserId)
-    end)
-    
-    if success and data then
-        -- Restore player data
-        local playerData = self.state.Players[player.UserId]
-        if playerData then
-            for key, value in pairs(data) do
-                playerData[key] = value
-            end
-            print("[GameManager] Loaded data for: " .. player.Name)
-        end
-    else
-        print("[GameManager] No saved data for: " .. player.Name)
-    end
-end
-
--- Save player data to DataStore
-function GameManager:SavePlayerData(player)
-    local DataStoreService = game:GetService("DataStoreService")
-    local dataStore = DataStoreService:GetDataStore("PlayerData")
-    
-    local playerData = self.state.Players[player.UserId]
-    if playerData then
-        local success, err = pcall(function()
-            dataStore:SetAsync("Player_" .. player.UserId, playerData)
-        end)
-        
-        if success then
-            print("[GameManager] Saved data for: " .. player.Name)
-        else
-            warn("[GameManager] Failed to save data for: " .. player.Name .. " - " .. tostring(err))
-        end
-    end
-end
-
 -- Initialize world
 function GameManager:InitWorld()
     print("[GameManager] Initializing world...")
-    
-    -- Load world modules
-    if self.modules.WorldManager then
-        self.modules.WorldManager:Init()
-    end
 end
 
 -- Get player data
@@ -218,13 +165,4 @@ function GameManager:UpdatePlayerData(player, key, value)
     end
 end
 
--- Broadcast message to all players
-function GameManager:Broadcast(message)
-    for _, playerData in pairs(self.state.Players) do
-        -- Send message to player UI
-        -- Implementation depends on UI system
-    end
-end
-
--- Return the game manager instance
-return GameManager.new()
+return GameManager
