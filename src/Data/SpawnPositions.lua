@@ -1,18 +1,11 @@
 --[[
     Arcadia Online - Spawn Positions
-    
-    SEMUA posisi spawn ada di sini!
-    
-    @author arcadiastore
-    @version 3.0.0
 ]]
 
 local SpawnPositions = {}
 
 SpawnPositions["TrainingGround"] = {
-    area = "TrainingGround",
-    description = "Area latihan untuk pemula",
-    monsterPositions = {
+    positions = {
         Vector3.new(0, 1, 40),
         Vector3.new(-10, 1, 50),
         Vector3.new(10, 1, 45),
@@ -22,9 +15,7 @@ SpawnPositions["TrainingGround"] = {
 }
 
 SpawnPositions["ForestEntrance"] = {
-    area = "ForestEntrance",
-    description = "Pintu masuk hutan",
-    monsterPositions = {
+    positions = {
         Vector3.new(0, 1, -50),
         Vector3.new(-10, 1, -60),
         Vector3.new(10, 1, -55),
@@ -33,9 +24,7 @@ SpawnPositions["ForestEntrance"] = {
 }
 
 SpawnPositions["DeepForest"] = {
-    area = "DeepForest",
-    description = "Hutan dalam",
-    monsterPositions = {
+    positions = {
         Vector3.new(0, 1, -80),
         Vector3.new(-15, 1, -90),
         Vector3.new(15, 1, -85),
@@ -43,9 +32,7 @@ SpawnPositions["DeepForest"] = {
 }
 
 SpawnPositions["ForestGate"] = {
-    area = "ForestGate",
-    description = "Gerbang hutan - Boss area",
-    monsterPositions = {
+    positions = {
         Vector3.new(0, 3, -100),
     },
 }
