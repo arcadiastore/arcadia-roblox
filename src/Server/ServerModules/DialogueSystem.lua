@@ -157,14 +157,13 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
     end
     
     -- Handle quest_complete triggered from greeting
-    if responseText == "Saya sudah menyelesaikan tugasnya!" or responseText == "Saya sudah menyelesaikan tugasnya!" then
-        -- Find ready quest for this NPC
+    if responseText == "Saya sudah menyelesaikan tugasnya!" then
         local QuestSystem = require(script.Parent.QuestSystem)
         local readyQuestId = QuestSystem:GetReadyQuest(data, npcId)
         if readyQuestId then
             state.currentNode = "quest_complete"
             state.questId = readyQuestId
-            local readyQuestData = GameData:GetQuest(readyQuestId)
+            local npcData = GameData:GetNPC(npcId)
             events.DialogueEvent:FireClient(player, {
                 type = "Continue",
                 npcId = npcId,
@@ -183,7 +182,7 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
     
     -- Handle "Ada tugas untuk saya?" from greeting
     if responseText == "Ada tugas untuk saya?" then
-        -- Find quest to offer
+        local npcData = GameData:GetNPC(npcId)
         local questToOffer = nil
         for questId, qData in pairs(GameData.Quests or {}) do
             if qData.giver == npcId and not data.activeQuests[questId] and not data.completedQuests[questId] then
@@ -293,6 +292,33 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
     
     print("[Dialogue] " .. player.Name .. " selected: " .. responseText)
     
+    -- Check if response has action (e.g., select_job)
+    if selected.action then
+        if selected.action == "select_job" and selected.jobId then
+            local PlayerData = require(script.Parent.PlayerData)
+            local success, msg = PlayerData:SetJob(player, selected.jobId, events)
+            
+            local npcData = GameData:GetNPC(npcId)
+            local jobData = GameData.Jobs and GameData.Jobs[selected.jobId]
+            local responseMsg = success 
+                and (msg .. "\n\nStats kamu telah diperbarui sesuai job " .. selected.jobId .. "!")
+                or msg
+            
+            events.DialogueEvent:FireClient(player, {
+                type = "Continue",
+                npcId = npcId,
+                npcName = npcData and npcData.name or npcId,
+                dialogue = {
+                    text = responseMsg,
+                    responses = {{text = "Terima kasih!", next = nil}},
+                },
+            })
+            
+            playerDialogueState[player.UserId] = nil
+            return true
+        end
+    end
+    
     -- Go to next node
     if selected.next then
         local nextNode = dialogueData[selected.next]
@@ -322,9 +348,7 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                 print("[Dialogue] QuestData found: " .. tostring(questData ~= nil))
                 
                 if questData then
-                    -- Check if can accept
                     if data.activeQuests[nextNode.questId] then
-                        -- Already active - show status
                         local statusText = QuestSystem:GetQuestStatusMessage(data, nextNode.questId, questData)
                         events.DialogueEvent:FireClient(player, {
                             type = "Continue",
@@ -336,7 +360,6 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                             },
                         })
                     elseif data.completedQuests[nextNode.questId] then
-                        -- Already completed
                         events.DialogueEvent:FireClient(player, {
                             type = "Continue",
                             npcId = npcId,
@@ -347,13 +370,11 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                             },
                         })
                     else
-                        -- Check if can accept
                         local canAccept = true
                         if questData.level and data.level < questData.level then canAccept = false end
                         if questData.prerequisite and not data.completedQuests[questData.prerequisite] then canAccept = false end
                         
                         if canAccept then
-                            -- Show quest preview
                             local questPreview = QuestSystem:BuildQuestPreview(questData)
                             print("[Dialogue] Sending quest preview to client")
                             events.DialogueEvent:FireClient(player, {
@@ -370,7 +391,6 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
                                 },
                             })
                         else
-                            -- Show rejection reason
                             local rejectMsg = QuestSystem:GetRejectionMessage(data, questData)
                             events.DialogueEvent:FireClient(player, {
                                 type = "Continue",

@@ -59,4 +59,14 @@ NPCs["TrainingMaster"] = {
     hasShop = false,
 }
 
+NPCs["JobMaster"] = {
+    id = "JobMaster",
+    name = "Job Master",
+    title = "Penasehat Karir",
+    color = Color3.fromRGB(180, 130, 255),
+    position = Vector3.new(35, 1, 0),
+    hasQuest = false,
+    hasShop = false,
+}
+
 return NPCs

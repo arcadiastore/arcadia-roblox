@@ -103,4 +103,53 @@ Dialogues["Merchant"] = {
     },
 }
 
+Dialogues["JobMaster"] = {
+    npcId = "JobMaster",
+    greeting = {
+        text = "Selamat datang, petualang! Saya adalah Job Master. Kamu bisa memilih job di sini.",
+        responses = {
+            {text = "Saya mau pilih Job!", next = "select_job"},
+            {text = "Apa saja job yang tersedia?", next = "job_info"},
+            {text = "Nanti saja", next = nil},
+        },
+    },
+    select_job = {
+        text = "Pilih job yang kamu inginkan:",
+        responses = {
+            {text = "Warrior - Tank/Melee DPS", next = "confirm_warrior"},
+            {text = "Mage - Magic DPS/Support", next = "confirm_mage"},
+            {text = "Archer - Ranged DPS", next = "confirm_archer"},
+            {text = "Kembali", next = "greeting"},
+        },
+    },
+    job_info = {
+        text = "3 job awal:\n[W] Warrior - HP & DEF tinggi\n[M] Mage - MATK & MP tinggi\n[A] Archer - SPD & LUK tinggi",
+        responses = {
+            {text = "Saya mau pilih Job!", next = "select_job"},
+            {text = "Nanti saja", next = nil},
+        },
+    },
+    confirm_warrior = {
+        text = "Yakin pilih Warrior?\n+50 HP, +5 ATK, +8 DEF, -2 SPD\nSenjata: Sword, Axe, Hammer",
+        responses = {
+            {text = "Ya, saya pilih Warrior!", action = "select_job", jobId = "Warrior"},
+            {text = "Tidak, kembali", next = "select_job"},
+        },
+    },
+    confirm_mage = {
+        text = "Yakin pilih Mage?\n+50 MP, +10 MATK, +5 MDEF, -20 HP\nSenjata: Staff, Wand, Orb",
+        responses = {
+            {text = "Ya, saya pilih Mage!", action = "select_job", jobId = "Mage"},
+            {text = "Tidak, kembali", next = "select_job"},
+        },
+    },
+    confirm_archer = {
+        text = "Yakin pilih Archer?\n+8 SPD, +5 LUK, +3 ATK\nSenjata: Bow, Crossbow, Dagger",
+        responses = {
+            {text = "Ya, saya pilih Archer!", action = "select_job", jobId = "Archer"},
+            {text = "Tidak, kembali", next = "select_job"},
+        },
+    },
+}
+
 return Dialogues

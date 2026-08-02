@@ -37,13 +37,14 @@ end
 -- Load all data modules (with fallback)
 GameData.Monsters = safeRequire(script, "Monsters")
 GameData.Items = safeRequire(script, "Items")
-GameData.Skills = safeRequire(script, "Skills")  -- Optional, won't crash if missing
+GameData.Skills = safeRequire(script, "Skills")
 GameData.Quests = safeRequire(script, "Quests")
 GameData.NPCs = safeRequire(script, "NPCs")
 GameData.Shops = safeRequire(script, "Shops")
 GameData.Dialogues = safeRequire(script, "Dialogues")
 GameData.SpawnPositions = safeRequire(script, "SpawnPositions")
 GameData.Formulas = safeRequire(script, "Formulas")
+GameData.Jobs = safeRequire(script, "Jobs")
 
 -- ============================================
 -- GETTER FUNCTIONS
