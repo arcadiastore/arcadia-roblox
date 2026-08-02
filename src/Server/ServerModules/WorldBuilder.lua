@@ -69,7 +69,8 @@ function WorldBuilder:SpawnMonsters()
     monsterFolder.Parent = workspace
     
     for monsterId, monsterData in pairs(GameData.Monsters) do
-        local positions = GameData.SpawnPositions[monsterData.spawnArea]
+        local spawnArea = GameData.SpawnPositions[monsterData.spawnArea]
+        local positions = spawnArea and spawnArea.positions
         if positions then
             for i, pos in ipairs(positions) do
                 local monster = Instance.new("Part")

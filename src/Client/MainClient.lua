@@ -132,8 +132,12 @@ local function connectNPC(npc)
     if click then
         click.MouseClick:Connect(function()
             local npcId = npc:GetAttribute("NPCId") or npc.Name
+            print("[Client] Clicked NPC: " .. npcId)
             DialogueEvent:FireServer("talk", {npcId = npcId})
         end)
+        print("[Client] Connected NPC: " .. npc.Name)
+    else
+        warn("[Client] NPC " .. npc.Name .. " has no ClickDetector!")
     end
 end
 

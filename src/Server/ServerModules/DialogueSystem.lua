@@ -261,8 +261,15 @@ function DialogueSystem:Respond(player, data, npcId, responseText, events)
         return false
     end
     
-    -- Handle quest accept
-    if responseText == "✓ Saya terima quest ini!" or responseText == "Saya terima quest ini!" then
+    -- Handle quest accept (match all variations)
+    local acceptResponses = {
+        ["✓ Saya terima quest ini!"] = true,
+        ["Saya terima quest ini!"] = true,
+        ["Saya terima!"] = true,
+        ["Saya akan membantu!"] = true,
+    }
+    
+    if acceptResponses[responseText] or (currentNode.questId and string.find(responseText:lower(), "terima")) then
         if currentNode.questId then
             local QuestSystem = require(script.Parent.QuestSystem)
             QuestSystem:AcceptQuest(player, data, currentNode.questId, events)
