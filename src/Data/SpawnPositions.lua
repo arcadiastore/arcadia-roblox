@@ -37,12 +37,24 @@ SpawnPositions["ForestGate"] = {
     },
 }
 
+-- Green Forest area (beyond Deep Forest)
+SpawnPositions["GreenForest"] = {
+    positions = {
+        Vector3.new(-20, 1, -125),
+        Vector3.new(20, 1, -130),
+        Vector3.new(0, 1, -135),
+        Vector3.new(-15, 1, -140),
+        Vector3.new(15, 1, -145),
+    },
+}
+
 -- Checkpoints (save points) - one per hunting area
 SpawnPositions["Checkpoints"] = {
     {name = "Village Checkpoint", area = "Village", position = Vector3.new(0, 1, 15)},
     {name = "Training Ground Checkpoint", area = "TrainingGround", position = Vector3.new(0, 1, 30)},
     {name = "Forest Checkpoint", area = "ForestEntrance", position = Vector3.new(0, 1, -40)},
     {name = "Deep Forest Checkpoint", area = "DeepForest", position = Vector3.new(0, 1, -75)},
+    {name = "Green Forest Checkpoint", area = "GreenForest", position = Vector3.new(0, 1, -120)},
 }
 
 return SpawnPositions

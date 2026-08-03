@@ -10,6 +10,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -61,6 +62,7 @@ local DamagePopup = require(ClientModules:WaitForChild("DamagePopup"))
 local EquipmentUI = require(ClientModules:WaitForChild("EquipmentUI"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local AutoPanel = require(ClientModules:WaitForChild("AutoPanel"))
+local SkillBar = require(ClientModules:WaitForChild("SkillBar"))
 
 print("[Client] All modules loaded!")
 
@@ -76,6 +78,7 @@ Notification:Create(HUD:GetGUI())
 EquipmentUI:Create(playerGui)
 InventoryUI:Create(playerGui)
 AutoPanel:Create(playerGui)
+SkillBar:Create()
 QuestTracker:SetAutoPanel(AutoPanel)
 
 print("[Client] All UI created!")
@@ -201,6 +204,7 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         AutoPanel:Update(data)
         EquipmentUI:Update(data)
         InventoryUI:Update(data)
+        SkillBar:Update(data)
         
     elseif data.type == "QuestAccepted" then
         Notification:QuestAccepted(data.questName)
@@ -226,6 +230,37 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         
     elseif data.type == "Notification" then
         Notification:Show(data.text, Color3.fromRGB(200, 200, 200), 3)
+        
+    elseif data.type == "SkillUsed" then
+        -- Skill effect notification
+        if data.damage then
+            -- Damage skill - show popup on monster
+            local monsterFolder = workspace:FindFirstChild("Monsters")
+            if monsterFolder and data.monsterName then
+                local monsterPart = monsterFolder:FindFirstChild(data.monsterName)
+                if monsterPart then
+                    DamagePopup:Show(monsterPart, data.damage)
+                    -- Update HP label
+                    local billboard = monsterPart:FindFirstChild("NameTag")
+                    if billboard then
+                        local hpLabel = billboard:FindFirstChild("HPLabel")
+                        if hpLabel then
+                            hpLabel.Text = "HP: " .. data.currentHP .. "/" .. data.maxHP
+                        end
+                    end
+                end
+            end
+            Notification:Show(data.skillName .. "! -" .. data.damage .. " DMG", Color3.fromRGB(255, 200, 50), 2)
+        elseif data.heal then
+            Notification:Show(data.skillName .. "! +" .. data.heal .. " HP", Color3.fromRGB(50, 255, 100), 2)
+        elseif data.buff then
+            Notification:Show(data.skillName .. "!", Color3.fromRGB(100, 200, 255), 2)
+        end
+        
+        -- Update MP display
+        if data.mp then
+            HUD:Update({type = "Update", mp = data.mp, maxMp = data.maxMp})
+        end
         
     elseif data.type == "MonsterRespawn" then
         -- Reset HP display on respawned monster
@@ -372,7 +407,15 @@ UserInputService.InputBegan:Connect(function(input, processed)
         if InventoryUI:IsOpen() and EquipmentUI:IsOpen() then
             EquipmentUI:Toggle()
         end
+    elseif input.KeyCode == Enum.KeyCode.One or input.KeyCode == Enum.KeyCode.Two or
+           input.KeyCode == Enum.KeyCode.Three or input.KeyCode == Enum.KeyCode.Four then
+        SkillBar:HandleInput(input)
     end
+end)
+
+-- Update skill cooldowns every frame
+RunService.RenderStepped:Connect(function()
+    SkillBar:UpdateCooldowns()
 end)
 
 print("[Client] Equipment & Inventory connected!")

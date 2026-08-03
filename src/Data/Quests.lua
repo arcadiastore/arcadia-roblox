@@ -69,4 +69,74 @@ Quests["quest_kill_guardian"] = {
     prerequisite = "quest_kill_boars",
 }
 
+-- ============================================
+-- GREEN FOREST QUESTS (Lv 10-25)
+-- ============================================
+
+Quests["quest_green_forest_goblins"] = {
+    id = "quest_green_forest_goblins",
+    name = "Ancaman Goblin",
+    description = "Goblin menyerang penduduk Green Forest! Bunuh 5 Goblin.",
+    level = 10,
+    giver = "ForestGuard",
+    objectives = {
+        {type = "kill", target = "Goblin", count = 5, description = "Bunuh Goblin"},
+    },
+    rewards = {
+        exp = 400,
+        gold = 800,
+    },
+    prerequisite = "quest_kill_guardian",
+}
+
+Quests["quest_green_forest_spirits"] = {
+    id = "quest_green_forest_spirits",
+    name = "Roh Hutan yang Marah",
+    description = "Roh Hutan menjadi agresif! Bunuh 3 Roh Hutan untuk meredakan mereka.",
+    level = 12,
+    giver = "ForestGuard",
+    objectives = {
+        {type = "kill", target = "ForestSpirit", count = 3, description = "Bunuh Roh Hutan"},
+    },
+    rewards = {
+        exp = 600,
+        gold = 1200,
+    },
+    prerequisite = "quest_green_forest_goblins",
+}
+
+Quests["quest_green_forest_spiders"] = {
+    id = "quest_green_forest_spiders",
+    name = "Sarang Laba-laba",
+    description = "Laba-laba Hutan membuat sarang di jalur! Bersihkan dengan membunuh 4 Laba-laba.",
+    level = 14,
+    giver = "Herbalist",
+    objectives = {
+        {type = "kill", target = "ForestSpider", count = 4, description = "Bunuh Laba-laba Hutan"},
+    },
+    rewards = {
+        exp = 800,
+        gold = 1500,
+        items = {"hp_potion_medium"},
+    },
+    prerequisite = "quest_green_forest_spirits",
+}
+
+Quests["quest_green_forest_herb"] = {
+    id = "quest_green_forest_herb",
+    name = "Ramuan Penyembuh",
+    description = "Kumpulkan 3 Herb dari monster di Green Forest untuk membuat ramuan.",
+    level = 15,
+    giver = "Herbalist",
+    objectives = {
+        {type = "collect", target = "herb", count = 3, description = "Kumpulkan Herb"},
+    },
+    rewards = {
+        exp = 500,
+        gold = 1000,
+        items = {"mp_potion_medium"},
+    },
+    prerequisite = "quest_green_forest_spiders",
+}
+
 return Quests

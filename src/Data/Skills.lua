@@ -155,6 +155,33 @@ local Skills = {
             {type = "stealth", duration = 3},
         },
     },
+    
+    -- ============================================
+    -- ARCHER SKILLS (for Archer job)
+    -- ============================================
+    archer_arrow_rain = {
+        id = "archer_arrow_rain",
+        name = "Arrow Rain",
+        description = "Hujan panah dengan damage 160%",
+        type = "physical",
+        mpCost = 15,
+        cooldown = 6,
+        damageMultiplier = 1.6,
+        effects = {},
+    },
+    
+    archer_eagle_eye = {
+        id = "archer_eagle_eye",
+        name = "Eagle Eye",
+        description = "Tingkatkan akurasi dan critical rate 20%",
+        type = "buff",
+        mpCost = 20,
+        cooldown = 18,
+        damageMultiplier = 0,
+        effects = {
+            {type = "buff", stat = "critRate", value = 0.2, duration = 12},
+        },
+    },
 }
 
 return Skills

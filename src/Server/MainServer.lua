@@ -68,6 +68,7 @@ local UpdateEvent = makeEvent("UpdateEvent")
 local EquipEvent = makeEvent("EquipEvent")
 local InventoryEvent = makeEvent("InventoryEvent")
 local RespawnEvent = makeEvent("RespawnEvent")
+local SkillEvent = makeEvent("SkillEvent")
 
 -- Events table for modules
 local events = {
@@ -315,6 +316,23 @@ InventoryEvent.OnServerEvent:Connect(function(player, action, data)
                 InventoryEvent:FireClient(player, {type = "Used", itemName = itemData.name})
             end
         end
+    end
+end)
+
+-- Skill
+SkillEvent.OnServerEvent:Connect(function(player, data)
+    local pData = PlayerData:Get(player)
+    if not pData then
+        PlayerData:Init(player)
+        pData = PlayerData:Get(player)
+    end
+    if not pData then return end
+    
+    local skillId = data and data.skillId
+    local monsterPart = data and data.monsterPart
+    
+    if skillId then
+        CombatSystem:HandleSkill(player, monsterPart, skillId, PlayerData, events)
     end
 end)
 

@@ -10,6 +10,147 @@ local CombatSystem = {}
 -- Anti-spam: track last attack time per player
 local lastAttackTime = {}
 
+-- Skill cooldowns per player: {playerId = {skillId = lastUseTime}}
+local skillCooldowns = {}
+
+-- Handle skill usage
+function CombatSystem:HandleSkill(player, monsterPart, skillId, playerData, events)
+    local data = playerData:Get(player)
+    if not data then return end
+    if not data.job then return end
+    
+    -- Get skill data
+    local skillData = GameData.Skills and GameData.Skills[skillId]
+    if not skillData then
+        warn("[Combat] Skill not found: " .. skillId)
+        return
+    end
+    
+    -- Check if player has learned this skill
+    if not data.learnedSkills or not data.learnedSkills[skillId] then
+        warn("[Combat] " .. player.Name .. " hasn't learned " .. skillId)
+        return
+    end
+    
+    -- Check MP
+    if (data.mp or 0) < skillData.mpCost then
+        events.UpdateEvent:FireClient(player, {
+            type = "Notification",
+            text = "MP tidak cukup! Butuh " .. skillData.mpCost .. " MP",
+            notifType = "error",
+        })
+        return
+    end
+    
+    -- Check cooldown
+    local now = tick()
+    if not skillCooldowns[player.UserId] then skillCooldowns[player.UserId] = {} end
+    if skillCooldowns[player.UserId][skillId] then
+        local elapsed = now - skillCooldowns[player.UserId][skillId]
+        if elapsed < skillData.cooldown then
+            local remaining = math.ceil(skillData.cooldown - elapsed)
+            events.UpdateEvent:FireClient(player, {
+                type = "Notification",
+                text = "Cooldown! " .. remaining .. "s",
+                notifType = "error",
+            })
+            return
+        end
+    end
+    
+    -- Consume MP
+    data.mp = data.mp - skillData.mpCost
+    skillCooldowns[player.UserId][skillId] = now
+    
+    -- Execute skill based on type
+    if skillData.type == "physical" or skillData.type == "magic" then
+        -- Damage skill - need monster target
+        if not monsterPart or not monsterPart.Parent then return end
+        
+        local character = player.Character
+        if not character then return end
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+        
+        -- Range check (skills have extended range)
+        local attackRange = GameData:GetAttackRange(data) * 1.5
+        local dist = (monsterPart.Position - rootPart.Position).Magnitude
+        if dist > attackRange then return end
+        
+        local monsterId = monsterPart:GetAttribute("MonsterId")
+        if not monsterId then return end
+        local monsterData = GameData:GetMonster(monsterId)
+        if not monsterData then return end
+        
+        local monsterHP = monsterPart:GetAttribute("CurrentHP") or monsterData.hp
+        
+        -- Calculate skill damage
+        local baseAtk = skillData.type == "magic" and (data.matk or data.atk) or data.atk
+        local damage = GameData:CalculateDamage(baseAtk, skillData.damageMultiplier, monsterData.def)
+        
+        -- Apply damage
+        monsterHP = monsterHP - damage
+        monsterPart:SetAttribute("CurrentHP", monsterHP)
+        
+        print("[Skill] " .. player.Name .. " used " .. skillData.name .. " on " .. monsterId .. " DMG:" .. damage)
+        
+        -- Send skill effect to client
+        events.UpdateEvent:FireClient(player, {
+            type = "SkillUsed",
+            skillName = skillData.name,
+            damage = damage,
+            monsterName = monsterPart.Name,
+            currentHP = math.max(0, monsterHP),
+            maxHP = monsterData.hp,
+            mp = data.mp,
+            maxMp = data.maxMp or 50,
+        })
+        
+        -- Check monster death
+        if monsterHP <= 0 then
+            self:OnMonsterDeath(player, monsterPart, monsterId, monsterData, data, playerData, events)
+        end
+        
+    elseif skillData.type == "heal" then
+        -- Heal skill
+        local healValue = 0
+        for _, effect in ipairs(skillData.effects) do
+            if effect.type == "heal" then
+                healValue = effect.value
+            end
+        end
+        
+        data.hp = math.min(data.maxHp, data.hp + healValue)
+        
+        events.UpdateEvent:FireClient(player, {
+            type = "SkillUsed",
+            skillName = skillData.name,
+            heal = healValue,
+            hp = data.hp,
+            maxHp = data.maxHp,
+            mp = data.mp,
+            maxMp = data.maxMp or 50,
+        })
+        
+        print("[Skill] " .. player.Name .. " used " .. skillData.name .. " healed " .. healValue)
+        
+    elseif skillData.type == "buff" then
+        -- Buff skill (simplified - just notify)
+        events.UpdateEvent:FireClient(player, {
+            type = "SkillUsed",
+            skillName = skillData.name,
+            buff = true,
+            mp = data.mp,
+            maxMp = data.maxMp or 50,
+        })
+        
+        print("[Skill] " .. player.Name .. " used buff " .. skillData.name)
+    end
+    
+    -- Send data update
+    playerData:SendUpdate(player, events)
+end
+
 -- Get attack cooldown based on weapon (seconds)
 local function getAttackCooldown(playerData)
     local GameDataItems = GameData.Items or {}

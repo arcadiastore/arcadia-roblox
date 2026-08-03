@@ -69,4 +69,31 @@ NPCs["JobMaster"] = {
     hasShop = false,
 }
 
+-- ============================================
+-- GREEN FOREST NPCs
+-- ============================================
+
+NPCs["ForestGuard"] = {
+    id = "ForestGuard",
+    name = "Penjaga Hutan",
+    title = "Ranger Green Forest",
+    color = Color3.fromRGB(50, 180, 50),
+    position = Vector3.new(0, 1, -120),
+    hasQuest = true,
+    hasShop = false,
+    quests = {"quest_green_forest_goblins", "quest_green_forest_spirits"},
+}
+
+NPCs["Herbalist"] = {
+    id = "Herbalist",
+    name = "Herbalis",
+    title = "Ahli Ramuan",
+    color = Color3.fromRGB(100, 200, 100),
+    position = Vector3.new(30, 1, -130),
+    hasQuest = true,
+    hasShop = true,
+    shopId = "potion_shop",
+    quests = {"quest_green_forest_spiders", "quest_green_forest_herb"},
+}
+
 return NPCs

@@ -393,9 +393,92 @@ function WorldBuilder:SpawnCheckpoints()
     print("[World] All checkpoints spawned!")
 end
 
+-- Create Green Forest area
+function WorldBuilder:CreateGreenForest()
+    print("[World] Creating Green Forest...")
+    
+    local forestFolder = Instance.new("Folder")
+    forestFolder.Name = "GreenForest"
+    forestFolder.Parent = workspace
+    
+    -- Green ground
+    local ground = Instance.new("Part")
+    ground.Name = "GreenForestGround"
+    ground.Size = Vector3.new(100, 1, 80)
+    ground.Position = Vector3.new(0, -0.5, -140)
+    ground.Anchored = true
+    ground.Color = Color3.fromRGB(34, 100, 34)
+    ground.Material = Enum.Material.Grass
+    ground.Parent = forestFolder
+    
+    -- Trees (decorative)
+    local treePositions = {
+        Vector3.new(-30, 0, -120), Vector3.new(-25, 0, -135), Vector3.new(-15, 0, -145),
+        Vector3.new(10, 0, -125), Vector3.new(20, 0, -140), Vector3.new(30, 0, -130),
+        Vector3.new(-40, 0, -130), Vector3.new(35, 0, -145), Vector3.new(-35, 0, -150),
+        Vector3.new(25, 0, -150), Vector3.new(0, 0, -155), Vector3.new(-10, 0, -115),
+    }
+    
+    for i, pos in ipairs(treePositions) do
+        local tree = Instance.new("Model")
+        tree.Name = "Tree_" .. i
+        tree.Parent = forestFolder
+        
+        -- Trunk
+        local trunk = Instance.new("Part")
+        trunk.Name = "Trunk"
+        trunk.Size = Vector3.new(2, 8, 2)
+        trunk.Position = pos + Vector3.new(0, 4, 0)
+        trunk.Anchored = true
+        trunk.Color = Color3.fromRGB(101, 67, 33)
+        trunk.Material = Enum.Material.Wood
+        trunk.Parent = tree
+        
+        -- Leaves
+        local leaves = Instance.new("Part")
+        leaves.Name = "Leaves"
+        leaves.Size = Vector3.new(8, 6, 8)
+        leaves.Position = pos + Vector3.new(0, 10, 0)
+        leaves.Anchored = true
+        leaves.Color = Color3.fromRGB(34, 139, 34)
+        leaves.Material = Enum.Material.Grass
+        leaves.Shape = Enum.PartType.Ball
+        leaves.Parent = tree
+    end
+    
+    -- Forest Gate (entry arch)
+    local gate = Instance.new("Part")
+    gate.Name = "ForestGate"
+    gate.Size = Vector3.new(12, 10, 2)
+    gate.Position = Vector3.new(0, 5, -105)
+    gate.Anchored = true
+    gate.Color = Color3.fromRGB(139, 90, 43)
+    gate.Material = Enum.Material.Wood
+    gate.Parent = forestFolder
+    
+    -- Gate sign
+    local sign = Instance.new("BillboardGui")
+    sign.Size = UDim2.new(0, 200, 0, 50)
+    sign.StudsOffset = Vector3.new(0, 7, 0)
+    sign.AlwaysOnTop = true
+    sign.Parent = gate
+    
+    local signLabel = Instance.new("TextLabel")
+    signLabel.Size = UDim2.new(1, 0, 1, 0)
+    signLabel.BackgroundTransparency = 1
+    signLabel.Text = "GREEN FOREST"
+    signLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    signLabel.TextSize = 24
+    signLabel.Font = Enum.Font.SourceSansBold
+    signLabel.Parent = sign
+    
+    print("[World] Green Forest created!")
+end
+
 -- Build the entire world
 function WorldBuilder:Build()
     print("[World] Building world...")
+    self:CreateGreenForest()
     self:SpawnNPCs()
     self:SpawnMonsters()
     self:SpawnCheckpoints()

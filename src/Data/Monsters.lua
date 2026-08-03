@@ -37,6 +37,38 @@ Monsters["Wolf"] = {
     respawnTime = 15,
 }
 
+Monsters["Goblin"] = {
+    id = "Goblin",
+    name = "Goblin",
+    level = 8,
+    hp = 100,
+    atk = 18,
+    def = 5,
+    exp = 65,
+    gold = 35,
+    color = Color3.fromRGB(50, 150, 50),
+    size = Vector3.new(2.5, 2.5, 2.5),
+    shape = "Block",
+    spawnArea = "GreenForest",
+    respawnTime = 15,
+}
+
+Monsters["ForestSpirit"] = {
+    id = "ForestSpirit",
+    name = "Roh Hutan",
+    level = 12,
+    hp = 200,
+    atk = 25,
+    def = 15,
+    exp = 100,
+    gold = 50,
+    color = Color3.fromRGB(100, 255, 150),
+    size = Vector3.new(3, 4, 3),
+    shape = "Ball",
+    spawnArea = "GreenForest",
+    respawnTime = 20,
+}
+
 Monsters["Boar"] = {
     id = "Boar",
     name = "Babi Hutan",
@@ -51,6 +83,22 @@ Monsters["Boar"] = {
     shape = "Block",
     spawnArea = "DeepForest",
     respawnTime = 20,
+}
+
+Monsters["ForestSpider"] = {
+    id = "ForestSpider",
+    name = "Laba-laba Hutan",
+    level = 10,
+    hp = 150,
+    atk = 22,
+    def = 10,
+    exp = 90,
+    gold = 45,
+    color = Color3.fromRGB(80, 40, 80),
+    size = Vector3.new(3, 2, 4),
+    shape = "Block",
+    spawnArea = "GreenForest",
+    respawnTime = 18,
 }
 
 Monsters["Guardian"] = {

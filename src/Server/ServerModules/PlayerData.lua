@@ -48,6 +48,7 @@ function PlayerData:GetDefault()
         activeQuests = {},
         completedQuests = {},
         lastCheckpoint = Vector3.new(0, 1, 15),  -- Default: village
+        learnedSkills = {},
     }
 end
 
@@ -98,6 +99,7 @@ function PlayerData:SendUpdate(player, events)
         activeQuests = data.activeQuests,
         completedQuests = data.completedQuests,
         lastCheckpoint = data.lastCheckpoint,
+        learnedSkills = data.learnedSkills,
     })
 end
 
@@ -206,6 +208,8 @@ function PlayerData:CheckLevelUp(player, events)
     end
     
     if leveled then
+        -- Learn new skills after level up
+        self:LearnSkills(player, events)
         self:SendUpdate(player, events)
     end
     
@@ -230,6 +234,9 @@ function PlayerData:SetJob(player, jobId, events)
     data.hp = data.maxHp
     data.mp = data.maxMp
     
+    -- Learn skills for this job
+    self:LearnSkills(player, events)
+    
     -- Check level up (player might have enough EXP)
     self:CheckLevelUp(player, events)
     
@@ -238,6 +245,55 @@ function PlayerData:SetJob(player, jobId, events)
     
     print("[PlayerData] " .. player.Name .. " selected job: " .. jobId)
     return true, "Job berhasil dipilih: " .. jobId
+end
+
+-- Learn skills based on job and level
+function PlayerData:LearnSkills(player, events)
+    local data = self:Get(player)
+    if not data then return end
+    if not data.job then return end
+    
+    if not data.learnedSkills then data.learnedSkills = {} end
+    
+    -- Job skill mapping
+    local jobSkills = {
+        Warrior = {
+            {id = "warrior_power_strike", level = 1},
+            {id = "warrior_shout", level = 5},
+        },
+        Mage = {
+            {id = "mage_fireball", level = 1},
+            {id = "mage_ice_shield", level = 5},
+        },
+        Archer = {
+            {id = "archer_arrow_rain", level = 1},
+            {id = "archer_eagle_eye", level = 5},
+        },
+    }
+    
+    local skills = jobSkills[data.job] or {}
+    local newSkills = {}
+    
+    for _, skill in ipairs(skills) do
+        if data.level >= skill.level and not data.learnedSkills[skill.id] then
+            data.learnedSkills[skill.id] = true
+            table.insert(newSkills, skill.id)
+            
+            -- Notify
+            if events then
+                local skillData = GameData.Skills and GameData.Skills[skill.id]
+                local skillName = skillData and skillData.name or skill.id
+                events.UpdateEvent:FireClient(player, {
+                    type = "Notification",
+                    text = "Skill baru: " .. skillName .. "!",
+                    notifType = "success",
+                })
+            end
+            print("[PlayerData] " .. player.Name .. " learned " .. skill.id)
+        end
+    end
+    
+    return newSkills
 end
 
 -- ============================================

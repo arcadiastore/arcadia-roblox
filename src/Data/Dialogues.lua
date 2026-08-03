@@ -152,4 +152,62 @@ Dialogues["JobMaster"] = {
     },
 }
 
+-- ============================================
+-- GREEN FOREST NPC DIALOGUES
+-- ============================================
+
+Dialogues["ForestGuard"] = {
+    npcId = "ForestGuard",
+    greeting = {
+        text = "Selamat datang di Green Forest, pejuang! Hutan ini penuh bahaya. Hati-hati dengan Goblin dan Roh Hutan.",
+        responses = {
+            {text = "Ada quest untuk saya?", next = "quest"},
+            {text = "Apa yang terjadi di hutan ini?", next = "about"},
+            {text = "Sampai jumpa.", next = nil},
+        },
+    },
+    about = {
+        text = "Green Forest dulunya damai, tapi Goblin menyerang dan Roh Hutan menjadi agresif. Kami butuh bantuan!",
+        responses = {
+            {text = "Saya akan membantu!", next = "quest"},
+            {text = "Saya akan kembali nanti.", next = nil},
+        },
+    },
+    quest = {
+        text = "Bunuh 5 Goblin yang berkeliaran di Green Forest!",
+        questId = "quest_green_forest_goblins",
+        responses = {
+            {text = "Saya terima!", next = nil},
+            {text = "Nanti saja.", next = nil},
+        },
+    },
+}
+
+Dialogues["Herbalist"] = {
+    npcId = "Herbalist",
+    greeting = {
+        text = "Oh, petualang! Saya sedang mencari bahan ramuan. Bisa bantu saya?",
+        responses = {
+            {text = "Ada quest?", next = "quest"},
+            {text = "Lihat daganganmu.", next = "shop"},
+            {text = "Sampai jumpa.", next = nil},
+        },
+    },
+    quest = {
+        text = "Laba-laba Hutan menghalangi jalur herb! Bunuh 4 Laba-laba Hutan.",
+        questId = "quest_green_forest_spiders",
+        responses = {
+            {text = "Saya terima!", next = nil},
+            {text = "Nanti saja.", next = nil},
+        },
+    },
+    shop = {
+        text = "Ini ramuan yang saya jual!",
+        openShop = "potion_shop",
+        responses = {
+            {text = "Terima kasih!", next = nil},
+        },
+    },
+}
+
 return Dialogues
