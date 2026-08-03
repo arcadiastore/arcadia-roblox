@@ -148,12 +148,15 @@ end
 
 -- Report: just talk to NPC, then STOP (player must choose manually)
 local function doReporting(npcId, questId)
-    -- Talk to NPC to open dialogue
-    interactNPC(npcId)
+    -- Send TALK event (not auto_report)
+    local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
+    if DialogueEvent then
+        DialogueEvent:FireServer("talk", {npcId = npcId})
+    end
     task.wait(1)
     
     -- STOP auto quest - player must choose manually
-    print("[AutoPanel] Dialogue opened - player must choose!")
+    print("[AutoPanel] Talk sent - player must choose!")
 end
 
 -- Main auto quest loop
