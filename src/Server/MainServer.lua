@@ -166,7 +166,7 @@ for _, player in ipairs(Players:GetPlayers()) do
         print("[Server] Late init for: " .. player.Name)
         PlayerData:Init(player)
         
-        -- Connect CharacterAdded for late joiners
+        -- Connect CharacterAdded
         player.CharacterAdded:Connect(function(character)
             local humanoid = character:WaitForChild("Humanoid", 5)
             if humanoid then
@@ -182,10 +182,10 @@ for _, player in ipairs(Players:GetPlayers()) do
             end
         end)
         
-        -- Load character if not already loaded
-        if not player.Character then
+        -- Always load character for late joiners
+        task.defer(function()
             player:LoadCharacter()
-        end
+        end)
     end
 end
 
