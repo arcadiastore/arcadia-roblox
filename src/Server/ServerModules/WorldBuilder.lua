@@ -327,6 +327,11 @@ function WorldBuilder:SpawnCheckpoints()
         light.Brightness = 2
         light.Parent = tower
         
+        -- ClickDetector for interaction
+        local clickDetector = Instance.new("ClickDetector")
+        clickDetector.MaxActivationDistance = 15
+        clickDetector.Parent = tower
+        
         -- Name tag
         local billboard = Instance.new("BillboardGui")
         billboard.Size = UDim2.new(0, 150, 0, 40)
@@ -344,12 +349,8 @@ function WorldBuilder:SpawnCheckpoints()
         nameLabel.TextScaled = true
         nameLabel.Parent = billboard
         
-        -- Touch detection - save checkpoint
-        tower.Touched:Connect(function(hit)
-            local character = hit.Parent
-            local player = Players:GetPlayerFromCharacter(character)
-            if not player then return end
-            
+        -- Click detection - save checkpoint
+        clickDetector.MouseClick:Connect(function(player)
             local pd = getPlayerData()
             if not pd then return end
             
