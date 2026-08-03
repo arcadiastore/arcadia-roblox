@@ -363,9 +363,20 @@ end
 
 -- Use skill by slot index
 function SkillBar:UseSkill(slotIndex)
-    if not currentData then return end
-    if not currentData.job then return end
-    if not currentData.learnedSkills then return end
+    print("[SkillBar] UseSkill called! slot=" .. slotIndex)
+    
+    if not currentData then
+        warn("[SkillBar] UseSkill: no currentData")
+        return
+    end
+    if not currentData.job then
+        warn("[SkillBar] UseSkill: no job")
+        return
+    end
+    if not currentData.learnedSkills then
+        warn("[SkillBar] UseSkill: no learnedSkills")
+        return
+    end
     
     -- Get skill ID from job
     local jobSkills = {
@@ -375,12 +386,23 @@ function SkillBar:UseSkill(slotIndex)
     }
     
     local skills = jobSkills[currentData.job]
-    if not skills or not skills[slotIndex] then return end
+    print("[SkillBar] Job=" .. currentData.job .. " skills=" .. tostring(skills))
+    
+    if not skills or not skills[slotIndex] then
+        warn("[SkillBar] No skill at slot " .. slotIndex)
+        return
+    end
     
     local skillId = skills[slotIndex]
+    print("[SkillBar] skillId=" .. skillId)
     
     -- Check if learned
     if not currentData.learnedSkills[skillId] then
+        warn("[SkillBar] Skill not learned: " .. skillId)
+        print("[SkillBar] learnedSkills keys:")
+        for k, v in pairs(currentData.learnedSkills) do
+            print("  " .. k .. " = " .. tostring(v))
+        end
         SkillBar:ShowNotLearned(slotIndex)
         return
     end
@@ -587,7 +609,16 @@ end
 
 -- Handle key input for skills
 function SkillBar:HandleInput(input)
-    if not currentData or not currentData.job then return end
+    print("[SkillBar] HandleInput called! KeyCode=" .. tostring(input.KeyCode))
+    
+    if not currentData then
+        warn("[SkillBar] No currentData!")
+        return
+    end
+    if not currentData.job then
+        warn("[SkillBar] No job! currentData.job is nil")
+        return
+    end
     
     local keyMap = {
         [Enum.KeyCode.One] = 1,
@@ -597,13 +628,9 @@ function SkillBar:HandleInput(input)
     }
     
     local slot = keyMap[input.KeyCode]
+    print("[SkillBar] Slot=" .. tostring(slot))
+    
     if slot then
-        -- Don't process if typing in a textbox
-        if playerGui:FindFirstChild("Chat") and playerGui.Chat:FindFirstChild("ChatBar") then
-            local chatBar = playerGui.Chat.ChatBar:FindFirstChild("TextBox")
-            if chatBar and chatBar:IsFocused() then return end
-        end
-        
         self:UseSkill(slot)
     end
 end
