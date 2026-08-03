@@ -64,6 +64,7 @@ local DialogueEvent = makeEvent("DialogueEvent")
 local UpdateEvent = makeEvent("UpdateEvent")
 local EquipEvent = makeEvent("EquipEvent")
 local InventoryEvent = makeEvent("InventoryEvent")
+local RespawnEvent = makeEvent("RespawnEvent")
 
 -- Events table for modules
 local events = {
@@ -95,33 +96,50 @@ Players.PlayerAdded:Connect(function(player)
                 if pData then
                     pData.hp = 0
                     PlayerData:SendUpdate(player, events)
-                    print("[Server] " .. player.Name .. " died - HP set to 0")
+                    
+                    -- Send death notification with respawn options
+                    events.UpdateEvent:FireClient(player, {
+                        type = "PlayerDied",
+                        checkpointName = "Checkpoint",  -- Will be replaced with actual name
+                    })
+                    print("[Server] " .. player.Name .. " died")
                 end
             end)
         end
-        
-        -- Reset HP to max on respawn (after death)
-        task.wait(2)  -- Wait for respawn to complete
-        
-        local pData = PlayerData:Get(player)
-        if pData then
-            pData.hp = pData.maxHp or 100
-            pData.mp = pData.maxMp or 50
-            
-            -- Get new Humanoid (after respawn)
-            local newChar = player.Character
-            if newChar then
-                local newHumanoid = newChar:FindFirstChild("Humanoid")
-                if newHumanoid then
-                    newHumanoid.MaxHealth = pData.maxHp or 100
-                    newHumanoid.Health = pData.maxHp or 100
-                end
-            end
-            
-            PlayerData:SendUpdate(player, events)
-            print("[Server] " .. player.Name .. " respawned - HP reset to " .. pData.hp)
-        end
     end)
+end)
+
+-- Handle respawn choice
+RespawnEvent.OnServerEvent:Connect(function(player, choice)
+    local pData = PlayerData:Get(player)
+    if not pData then return end
+    
+    local spawnPos
+    
+    if choice == "checkpoint" and pData.lastCheckpoint then
+        -- Respawn at last checkpoint
+        spawnPos = pData.lastCheckpoint
+        print("[Server] " .. player.Name .. " respawning at checkpoint")
+    else
+        -- Respawn at village (default)
+        spawnPos = Vector3.new(0, 5, 15)
+        print("[Server] " .. player.Name .. " respawning at village")
+    end
+    
+    -- Reset HP
+    pData.hp = pData.maxHp or 100
+    pData.mp = pData.maxMp or 50
+    
+    -- Teleport player
+    local character = player.Character
+    if character then
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            rootPart.CFrame = CFrame.new(spawnPos + Vector3.new(0, 3, 0))
+        end
+    end
+    
+    PlayerData:SendUpdate(player, events)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

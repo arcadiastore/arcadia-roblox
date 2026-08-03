@@ -42,6 +42,7 @@ local DialogueEvent = Events:WaitForChild("DialogueEvent")
 local UpdateEvent = Events:WaitForChild("UpdateEvent")
 local EquipEvent = Events:WaitForChild("EquipEvent")
 local InventoryEvent = Events:WaitForChild("InventoryEvent")
+local RespawnEvent = Events:WaitForChild("RespawnEvent")
 
 print("[Client] Events found!")
 
@@ -78,6 +79,77 @@ AutoPanel:Create(playerGui)
 QuestTracker:SetAutoPanel(AutoPanel)
 
 print("[Client] All UI created!")
+
+-- ============================================
+-- DEATH SCREEN
+-- ============================================
+
+local deathGui = nil
+
+local function showDeathScreen()
+    if deathGui then deathGui:Destroy() end
+    
+    deathGui = Instance.new("ScreenGui")
+    deathGui.Name = "DeathScreen"
+    deathGui.ResetOnSpawn = true
+    deathGui.Parent = playerGui
+    
+    -- Dark overlay
+    local overlay = Instance.new("Frame")
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    overlay.BackgroundTransparency = 0.3
+    overlay.BorderSizePixel = 0
+    overlay.Parent = deathGui
+    
+    -- Death message
+    local deathMsg = Instance.new("TextLabel")
+    deathMsg.Size = UDim2.new(0.6, 0, 0, 50)
+    deathMsg.Position = UDim2.new(0.2, 0, 0.3, 0)
+    deathMsg.BackgroundTransparency = 1
+    deathMsg.Text = "KAMU MATI!"
+    deathMsg.TextColor3 = Color3.fromRGB(255, 50, 50)
+    deathMsg.TextStrokeTransparency = 0
+    deathMsg.Font = Enum.Font.GothamBold
+    deathMsg.TextScaled = true
+    deathMsg.Parent = overlay
+    
+    -- Respawn at Village button
+    local villageBtn = Instance.new("TextButton")
+    villageBtn.Size = UDim2.new(0.3, 0, 0, 50)
+    villageBtn.Position = UDim2.new(0.15, 0, 0.5, 0)
+    villageBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 200)
+    villageBtn.Text = "Respawn di Kota"
+    villageBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    villageBtn.Font = Enum.Font.GothamBold
+    villageBtn.TextScaled = true
+    villageBtn.Parent = overlay
+    Instance.new("UICorner", villageBtn).CornerRadius = UDim.new(0, 8)
+    
+    villageBtn.MouseButton1Click:Connect(function()
+        RespawnEvent:FireServer("village")
+        deathGui:Destroy()
+        deathGui = nil
+    end)
+    
+    -- Respawn at Checkpoint button
+    local cpBtn = Instance.new("TextButton")
+    cpBtn.Size = UDim2.new(0.3, 0, 0, 50)
+    cpBtn.Position = UDim2.new(0.55, 0, 0.5, 0)
+    cpBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 150)
+    cpBtn.Text = "Respawn di Checkpoint"
+    cpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cpBtn.Font = Enum.Font.GothamBold
+    cpBtn.TextScaled = true
+    cpBtn.Parent = overlay
+    Instance.new("UICorner", cpBtn).CornerRadius = UDim.new(0, 8)
+    
+    cpBtn.MouseButton1Click:Connect(function()
+        RespawnEvent:FireServer("checkpoint")
+        deathGui:Destroy()
+        deathGui = nil
+    end)
+end
 
 -- ============================================
 -- EVENT HANDLERS
@@ -147,6 +219,13 @@ UpdateEvent.OnClientEvent:Connect(function(data)
     elseif data.type == "MonsterAttack" then
         -- Show monster attack notification
         Notification:Show(data.monsterName .. " menyerang! -" .. data.damage .. " HP", Color3.fromRGB(255, 80, 80), 2)
+        
+    elseif data.type == "PlayerDied" then
+        -- Show death screen with respawn options
+        showDeathScreen()
+        
+    elseif data.type == "Notification" then
+        Notification:Show(data.text, Color3.fromRGB(200, 200, 200), 3)
         
     elseif data.type == "MonsterRespawn" then
         -- Reset HP display on respawned monster

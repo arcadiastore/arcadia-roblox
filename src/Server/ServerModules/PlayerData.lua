@@ -47,6 +47,7 @@ function PlayerData:GetDefault()
         },
         activeQuests = {},
         completedQuests = {},
+        lastCheckpoint = Vector3.new(0, 1, 15),  -- Default: village
     }
 end
 
@@ -96,6 +97,7 @@ function PlayerData:SendUpdate(player, events)
         equipment = data.equipment,
         activeQuests = data.activeQuests,
         completedQuests = data.completedQuests,
+        lastCheckpoint = data.lastCheckpoint,
     })
 end
 

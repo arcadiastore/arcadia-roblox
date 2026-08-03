@@ -296,11 +296,99 @@ function WorldBuilder:SpawnMonsters()
     print("[World] All monsters spawned!")
 end
 
+-- Spawn checkpoints
+function WorldBuilder:SpawnCheckpoints()
+    local cpFolder = Instance.new("Folder")
+    cpFolder.Name = "Checkpoints"
+    cpFolder.Parent = workspace
+    
+    local checkpoints = GameData.SpawnPositions and GameData.SpawnPositions["Checkpoints"]
+    if not checkpoints then
+        warn("[World] No checkpoint data found!")
+        return
+    end
+    
+    for i, cp in ipairs(checkpoints) do
+        -- Create checkpoint tower
+        local tower = Instance.new("Part")
+        tower.Name = "Checkpoint_" .. cp.area
+        tower.Size = Vector3.new(3, 6, 3)
+        tower.Position = cp.position + Vector3.new(0, 3, 0)
+        tower.Anchored = true
+        tower.BrickColor = BrickColor.new("Cyan")
+        tower.Material = Enum.Material.Neon
+        tower.CanCollide = false
+        tower.Parent = cpFolder
+        
+        -- Glow effect
+        local light = Instance.new("PointLight")
+        light.Color = Color3.fromRGB(0, 255, 255)
+        light.Range = 15
+        light.Brightness = 2
+        light.Parent = tower
+        
+        -- Name tag
+        local billboard = Instance.new("BillboardGui")
+        billboard.Size = UDim2.new(0, 150, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, 5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = tower
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = "📍 " .. cp.name
+        nameLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextScaled = true
+        nameLabel.Parent = billboard
+        
+        -- Touch detection - save checkpoint
+        tower.Touched:Connect(function(hit)
+            local character = hit.Parent
+            local player = Players:GetPlayerFromCharacter(character)
+            if not player then return end
+            
+            local pd = getPlayerData()
+            if not pd then return end
+            
+            local pData = pd:Get(player)
+            if not pData then return end
+            
+            -- Save checkpoint position
+            local oldCP = pData.lastCheckpoint
+            local newCP = cp.position
+            
+            -- Only update if different checkpoint
+            if (oldCP - newCP).Magnitude > 5 then
+                pData.lastCheckpoint = newCP
+                
+                local events = game.ReplicatedStorage:FindFirstChild("Events")
+                if events then
+                    pd:SendUpdate(player, events)
+                    events.UpdateEvent:FireClient(player, {
+                        type = "Notification",
+                        text = "Checkpoint tersimpan: " .. cp.name,
+                        notifType = "info",
+                    })
+                end
+                print("[Checkpoint] " .. player.Name .. " saved: " .. cp.name)
+            end
+        end)
+        
+        print("[World] Checkpoint: " .. cp.name .. " at " .. tostring(cp.position))
+    end
+    
+    print("[World] All checkpoints spawned!")
+end
+
 -- Build the entire world
 function WorldBuilder:Build()
     print("[World] Building world...")
     self:SpawnNPCs()
     self:SpawnMonsters()
+    self:SpawnCheckpoints()
     print("[World] World built!")
 end
 
