@@ -15,25 +15,38 @@ local skillCooldowns = {}
 
 -- Handle skill usage
 function CombatSystem:HandleSkill(player, monsterPart, skillId, playerData, events)
+    print("[Skill] >>> HandleSkill called by " .. player.Name .. " skill=" .. tostring(skillId))
+    
     local data = playerData:Get(player)
-    if not data then return end
-    if not data.job then return end
+    if not data then
+        warn("[Skill] No player data for " .. player.Name)
+        return
+    end
+    if not data.job then
+        warn("[Skill] Player has no job!")
+        return
+    end
     
     -- Get skill data
     local skillData = GameData.Skills and GameData.Skills[skillId]
     if not skillData then
-        warn("[Combat] Skill not found: " .. skillId)
+        warn("[Skill] Skill not found: " .. tostring(skillId))
         return
     end
     
+    print("[Skill] Skill found: " .. skillData.name .. " type=" .. skillData.type .. " mp=" .. skillData.mpCost)
+    
     -- Check if player has learned this skill
     if not data.learnedSkills or not data.learnedSkills[skillId] then
-        warn("[Combat] " .. player.Name .. " hasn't learned " .. skillId)
+        warn("[Skill] " .. player.Name .. " hasn't learned " .. skillId)
+        print("[Skill] learnedSkills: " .. tostring(data.learnedSkills))
         return
     end
     
     -- Check MP
+    print("[Skill] Current MP: " .. (data.mp or 0) .. " / Need: " .. skillData.mpCost)
     if (data.mp or 0) < skillData.mpCost then
+        warn("[Skill] Not enough MP!")
         events.UpdateEvent:FireClient(player, {
             type = "Notification",
             text = "MP tidak cukup! Butuh " .. skillData.mpCost .. " MP",
@@ -49,11 +62,7 @@ function CombatSystem:HandleSkill(player, monsterPart, skillId, playerData, even
         local elapsed = now - skillCooldowns[player.UserId][skillId]
         if elapsed < skillData.cooldown then
             local remaining = math.ceil(skillData.cooldown - elapsed)
-            events.UpdateEvent:FireClient(player, {
-                type = "Notification",
-                text = "Cooldown! " .. remaining .. "s",
-                notifType = "error",
-            })
+            warn("[Skill] On cooldown! " .. remaining .. "s remaining")
             return
         end
     end
@@ -61,11 +70,16 @@ function CombatSystem:HandleSkill(player, monsterPart, skillId, playerData, even
     -- Consume MP
     data.mp = data.mp - skillData.mpCost
     skillCooldowns[player.UserId][skillId] = now
+    print("[Skill] MP consumed. New MP: " .. data.mp)
     
     -- Execute skill based on type
     if skillData.type == "physical" or skillData.type == "magic" then
         -- Damage skill - need monster target
-        if not monsterPart or not monsterPart.Parent then return end
+        print("[Skill] Damage skill, monsterPart: " .. tostring(monsterPart))
+        if not monsterPart or not monsterPart.Parent then
+            warn("[Skill] Invalid monster part!")
+            return
+        end
         
         local character = player.Character
         if not character then return end

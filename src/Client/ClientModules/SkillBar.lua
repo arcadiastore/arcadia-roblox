@@ -161,30 +161,40 @@ function SkillBar:StartAutoAttack(AttackEvent)
     self:StopAutoAttack()
     
     autoAttackRunning = true
+    print("[SkillBar] Auto-attack STARTED")
     
     autoAttackThread = task.spawn(function()
         while autoAttackRunning do
             -- Check if target still valid
             local target = self:GetTarget()
             if not target then
+                print("[SkillBar] Target invalid, stopping auto-attack")
                 autoAttackRunning = false
                 break
             end
             
-            -- Check range
             local character = player.Character
             if character then
                 local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
+                local humanoid = character:FindFirstChild("Humanoid")
+                if rootPart and humanoid then
                     local dist = (target.Position - rootPart.Position).Magnitude
-                    if dist <= 50 then  -- Max attack range
+                    
+                    -- Walk to target if too far
+                    if dist > 10 then
+                        humanoid:MoveTo(target.Position)
+                        print("[SkillBar] Walking to target... dist=" .. math.floor(dist))
+                    else
+                        -- In range, attack!
+                        humanoid:MoveTo(rootPart.Position)  -- Stop moving
+                        print("[SkillBar] ATTACKING! dist=" .. math.floor(dist))
                         AttackEvent:FireServer(target)
                     end
                 end
             end
             
-            -- Wait for attack cooldown (based on weapon)
-            local cooldown = 1.0  -- Default
+            -- Wait based on weapon speed
+            local cooldown = 1.0
             if currentData and currentData.equipment then
                 local weaponId = currentData.equipment.weapon1h or currentData.equipment.weapon2h
                 if weaponId then
@@ -196,8 +206,9 @@ function SkillBar:StartAutoAttack(AttackEvent)
                 end
             end
             
-            task.wait(cooldown + 0.1)  -- Small buffer
+            task.wait(cooldown + 0.1)
         end
+        print("[SkillBar] Auto-attack STOPPED")
     end)
 end
 
@@ -403,10 +414,16 @@ function SkillBar:UseSkill(slotIndex)
     
     -- For buffs and heals, monster target not needed
     if skillData.type == "buff" or skillData.type == "heal" then
+        print("[SkillBar] >>> SENDING SKILL: " .. skillId .. " (no target)")
         SkillEvent:FireServer({skillId = skillId, monsterPart = nil})
     else
-        if not monsterPart then return end
-        SkillEvent:FireServer({skillId = skillId, monsterPart = monsterPart})
+        local target = monsterPart or self:GetTargetMonster()
+        if not target then
+            warn("[SkillBar] No target for damage skill!")
+            return
+        end
+        print("[SkillBar] >>> SENDING SKILL: " .. skillId .. " to " .. target.Name)
+        SkillEvent:FireServer({skillId = skillId, monsterPart = target})
     end
     
     -- Start cooldown

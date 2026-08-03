@@ -321,18 +321,28 @@ end)
 
 -- Skill
 SkillEvent.OnServerEvent:Connect(function(player, data)
+    print("[Server] >>> SkillEvent received from " .. player.Name)
+    print("[Server] Data: skillId=" .. tostring(data and data.skillId) .. " monsterPart=" .. tostring(data and data.monsterPart))
+    
     local pData = PlayerData:Get(player)
     if not pData then
+        warn("[Server] No player data, initializing...")
         PlayerData:Init(player)
         pData = PlayerData:Get(player)
     end
-    if not pData then return end
+    if not pData then 
+        warn("[Server] Still no player data!")
+        return 
+    end
     
     local skillId = data and data.skillId
     local monsterPart = data and data.monsterPart
     
     if skillId then
+        print("[Server] Calling CombatSystem:HandleSkill with skillId=" .. skillId)
         CombatSystem:HandleSkill(player, monsterPart, skillId, PlayerData, events)
+    else
+        warn("[Server] No skillId in data!")
     end
 end)
 
