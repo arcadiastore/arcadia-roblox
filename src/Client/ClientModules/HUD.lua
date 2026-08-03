@@ -132,16 +132,16 @@ function HUD:Update(data)
         jobLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
     end
     
-    levelLabel.Text = "Lv." .. data.level
-    hpLabel.Text = "HP: " .. data.hp .. "/" .. data.maxHp
+    levelLabel.Text = "Lv." .. (data.level or 1)
+    hpLabel.Text = "HP: " .. (data.hp or 0) .. "/" .. (data.maxHp or 100)
     mpLabel.Text = "MP: " .. (data.mp or 50) .. "/" .. (data.maxMp or 50)
     
     -- Use server-provided EXP needed
     local expNeeded = data.expNeeded or 100
-    expLabel.Text = "EXP: " .. data.exp .. " / " .. expNeeded
+    expLabel.Text = "EXP: " .. (data.exp or 0) .. " / " .. expNeeded
     
-    goldLabel.Text = "Gold: " .. data.gold
-    atkLabel.Text = "ATK:" .. data.atk .. " DEF:" .. data.def .. " SPD:" .. (data.spd or 10)
+    goldLabel.Text = "Gold: " .. (data.gold or 0)
+    atkLabel.Text = "ATK:" .. (data.atk or 0) .. " DEF:" .. (data.def or 0) .. " SPD:" .. (data.spd or 10)
 end
 
 -- Get GUI (for child elements)
