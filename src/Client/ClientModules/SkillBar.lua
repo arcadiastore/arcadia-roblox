@@ -17,6 +17,211 @@ local cooldownLabels = {}
 
 local currentData = nil
 local cooldownTimers = {}  -- skillId = endTime
+local currentTarget = nil  -- Current target monster part
+local autoAttackRunning = false
+local autoAttackThread = nil
+local targetFrame = nil
+local targetNameLabel = nil
+local targetHPLabel = nil
+local targetHPBar = nil
+
+-- Create target frame UI
+function SkillBar:CreateTargetFrame()
+    if not mainGui then return end
+    
+    targetFrame = Instance.new("Frame")
+    targetFrame.Name = "TargetFrame"
+    targetFrame.Size = UDim2.new(0, 200, 0, 50)
+    targetFrame.Position = UDim2.new(0.5, -100, 0, 10)
+    targetFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    targetFrame.BackgroundTransparency = 0.3
+    targetFrame.BorderSizePixel = 0
+    targetFrame.Visible = false
+    targetFrame.Parent = mainGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = targetFrame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 50, 50)
+    stroke.Thickness = 2
+    stroke.Parent = targetFrame
+    
+    -- Target name
+    targetNameLabel = Instance.new("TextLabel")
+    targetNameLabel.Name = "TargetName"
+    targetNameLabel.Size = UDim2.new(1, -10, 0, 20)
+    targetNameLabel.Position = UDim2.new(0, 5, 0, 5)
+    targetNameLabel.BackgroundTransparency = 1
+    targetNameLabel.Text = "Target"
+    targetNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    targetNameLabel.TextSize = 14
+    targetNameLabel.Font = Enum.Font.SourceSansBold
+    targetNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    targetNameLabel.Parent = targetFrame
+    
+    -- HP Bar background
+    local hpBarBg = Instance.new("Frame")
+    hpBarBg.Name = "HPBarBG"
+    hpBarBg.Size = UDim2.new(1, -10, 0, 12)
+    hpBarBg.Position = UDim2.new(0, 5, 0, 28)
+    hpBarBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    hpBarBg.BorderSizePixel = 0
+    hpBarBg.Parent = targetFrame
+    
+    local hpCorner = Instance.new("UICorner")
+    hpCorner.CornerRadius = UDim.new(0, 4)
+    hpCorner.Parent = hpBarBg
+    
+    -- HP Bar fill
+    targetHPBar = Instance.new("Frame")
+    targetHPBar.Name = "HPBarFill"
+    targetHPBar.Size = UDim2.new(1, 0, 1, 0)
+    targetHPBar.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    targetHPBar.BorderSizePixel = 0
+    targetHPBar.Parent = hpBarBg
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.Parent = targetHPBar
+    
+    -- HP Text
+    targetHPLabel = Instance.new("TextLabel")
+    targetHPLabel.Name = "HPText"
+    targetHPLabel.Size = UDim2.new(1, 0, 1, 0)
+    targetHPLabel.BackgroundTransparency = 1
+    targetHPLabel.Text = "100/100"
+    targetHPLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    targetHPLabel.TextSize = 10
+    targetHPLabel.Font = Enum.Font.SourceSansBold
+    targetHPLabel.ZIndex = 2
+    targetHPLabel.Parent = hpBarBg
+end
+
+-- Update target frame display
+function SkillBar:UpdateTargetFrame()
+    if not targetFrame then return end
+    
+    local target = self:GetTarget()
+    if not target then
+        targetFrame.Visible = false
+        return
+    end
+    
+    targetFrame.Visible = true
+    
+    -- Get monster data
+    local monsterId = target:GetAttribute("MonsterId")
+    local monsterData = GameData:GetMonster(monsterId)
+    
+    if monsterData then
+        targetNameLabel.Text = monsterData.name .. " (Lv." .. monsterData.level .. ")"
+    else
+        targetNameLabel.Text = target.Name
+    end
+    
+    -- Get HP
+    local currentHP = target:GetAttribute("CurrentHP") or 0
+    local maxHP = monsterData and monsterData.hp or 100
+    
+    -- Update HP bar
+    local pct = math.clamp(currentHP / maxHP, 0, 1)
+    targetHPBar.Size = UDim2.new(pct, 0, 1, 0)
+    targetHPLabel.Text = math.floor(currentHP) .. "/" .. maxHP
+    
+    -- Color based on HP
+    if pct > 0.5 then
+        targetHPBar.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+    elseif pct > 0.25 then
+        targetHPBar.BackgroundColor3 = Color3.fromRGB(255, 255, 50)
+    else
+        targetHPBar.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end
+local autoAttackRunning = false
+local autoAttackThread = nil
+
+-- Set current target (called from main client when monster is clicked)
+function SkillBar:SetTarget(monsterPart)
+    currentTarget = monsterPart
+    if monsterPart then
+        print("[SkillBar] Target set: " .. monsterPart.Name)
+        -- Start auto-attack
+    else
+        print("[SkillBar] Target cleared")
+        -- Stop auto-attack
+        self:StopAutoAttack()
+    end
+end
+
+-- Start auto-attack loop
+function SkillBar:StartAutoAttack(AttackEvent)
+    -- Stop existing auto-attack
+    self:StopAutoAttack()
+    
+    autoAttackRunning = true
+    
+    autoAttackThread = task.spawn(function()
+        while autoAttackRunning do
+            -- Check if target still valid
+            local target = self:GetTarget()
+            if not target then
+                autoAttackRunning = false
+                break
+            end
+            
+            -- Check range
+            local character = player.Character
+            if character then
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    local dist = (target.Position - rootPart.Position).Magnitude
+                    if dist <= 50 then  -- Max attack range
+                        AttackEvent:FireServer(target)
+                    end
+                end
+            end
+            
+            -- Wait for attack cooldown (based on weapon)
+            local cooldown = 1.0  -- Default
+            if currentData and currentData.equipment then
+                local weaponId = currentData.equipment.weapon1h or currentData.equipment.weapon2h
+                if weaponId then
+                    local GameDataItems = GameData.Items or {}
+                    local wData = GameDataItems[weaponId]
+                    if wData and wData.stats and wData.stats.spd then
+                        cooldown = math.max(0.4, 1.2 - (wData.stats.spd * 0.05))
+                    end
+                end
+            end
+            
+            task.wait(cooldown + 0.1)  -- Small buffer
+        end
+    end)
+end
+
+-- Stop auto-attack
+function SkillBar:StopAutoAttack()
+    autoAttackRunning = false
+    if autoAttackThread then
+        task.cancel(autoAttackThread)
+        autoAttackThread = nil
+    end
+end
+
+-- Get current target
+function SkillBar:GetTarget()
+    -- Validate target still exists and alive
+    if currentTarget and currentTarget.Parent then
+        local hp = currentTarget:GetAttribute("CurrentHP")
+        if hp and hp > 0 then
+            return currentTarget
+        end
+    end
+    currentTarget = nil
+    return nil
+end
 
 -- Create skill bar UI
 function SkillBar:Create()
@@ -28,6 +233,9 @@ function SkillBar:Create()
         mainGui.ResetOnSpawn = false
         mainGui.Parent = playerGui
     end
+    
+    -- Create target frame at top
+    self:CreateTargetFrame()
     
     -- Skill bar frame at bottom center
     skillFrame = Instance.new("Frame")
@@ -209,6 +417,13 @@ end
 
 -- Get closest monster as target
 function SkillBar:GetTargetMonster()
+    -- First, use current target if valid
+    local target = self:GetTarget()
+    if target then
+        return target
+    end
+    
+    -- Otherwise, find closest monster
     local character = player.Character
     if not character then return nil end
     local rootPart = character:FindFirstChild("HumanoidRootPart")
@@ -231,6 +446,11 @@ function SkillBar:GetTargetMonster()
                 closest = monster
             end
         end
+    end
+    
+    -- Set as current target
+    if closest then
+        currentTarget = closest
     end
     
     return closest
@@ -308,6 +528,9 @@ end
 
 -- Update cooldown displays (called every frame)
 function SkillBar:UpdateCooldowns()
+    -- Update target frame
+    self:UpdateTargetFrame()
+    
     if not currentData or not currentData.job then return end
     
     local jobSkills = {

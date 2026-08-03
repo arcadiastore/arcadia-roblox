@@ -350,7 +350,12 @@ local function connectMonster(monster)
     local click = monster:FindFirstChild("ClickDetector")
     if click then
         click.MouseClick:Connect(function()
+            -- Set as current target for skills and auto-attack
+            SkillBar:SetTarget(monster)
+            -- First attack
             AttackEvent:FireServer(monster)
+            -- Start auto-attack loop
+            SkillBar:StartAutoAttack(AttackEvent)
         end)
     end
 end
