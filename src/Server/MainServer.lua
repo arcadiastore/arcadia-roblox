@@ -182,10 +182,9 @@ for _, player in ipairs(Players:GetPlayers()) do
             end
         end)
         
-        -- Always load character for late joiners
-        task.defer(function()
-            player:LoadCharacter()
-        end)
+        -- Load character
+        player:LoadCharacter()
+        print("[Server] " .. player.Name .. " character loaded!")
     end
 end
 
