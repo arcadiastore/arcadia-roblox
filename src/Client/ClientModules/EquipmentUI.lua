@@ -189,8 +189,12 @@ function EquipmentUI:Create(playerGui)
     infoLabel.Parent = frame
 end
 
-function EquipmentUI:Update()
+function EquipmentUI:Update(data)
+    if data then
+        playerData = data
+    end
     if not playerData then return end
+    if not isOpen then return end
     local GameData = ReplicatedStorage:FindFirstChild("GameData")
     if not GameData then return end
     GameData = require(GameData)
