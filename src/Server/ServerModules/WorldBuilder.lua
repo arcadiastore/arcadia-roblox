@@ -6,7 +6,20 @@
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
 local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
+
+-- Get PlayerData module (loaded after MainServer)
+local PlayerData = nil
+local function getPlayerData()
+    if not PlayerData then
+        local ok, mod = pcall(function()
+            return require(ServerScriptService.MainServer.ServerModules.PlayerData)
+        end)
+        if ok then PlayerData = mod end
+    end
+    return PlayerData
+end
 
 local WorldBuilder = {}
 
@@ -148,20 +161,29 @@ local function monsterAI(monster, spawnPos, monsterData)
             if now - lastAttackTime >= ATTACK_COOLDOWN then
                 lastAttackTime = now
                 
-                -- Deal damage to player
                 local humanoid = target.rootPart.Parent:FindFirstChild("Humanoid")
                 if humanoid then
                     local damage = monsterData.atk or 5
-                    humanoid:TakeDamage(damage)
                     
-                    -- Notify client of monster attack
-                    local events = game.ReplicatedStorage:FindFirstChild("Events")
-                    if events then
-                        events.UpdateEvent:FireClient(target.player, {
-                            type = "MonsterAttack",
-                            monsterName = monsterData.name,
-                            damage = damage,
-                        })
+                    -- Update playerData HP
+                    local pd = getPlayerData()
+                    local pData = pd and pd:Get(target.player)
+                    
+                    if pData then
+                        pData.hp = math.max(0, pData.hp - damage)
+                        humanoid.Health = pData.hp
+                        
+                        local events = game.ReplicatedStorage:FindFirstChild("Events")
+                        if events then
+                            pd:SendUpdate(target.player, events)
+                            events.UpdateEvent:FireClient(target.player, {
+                                type = "MonsterAttack",
+                                monsterName = monsterData.name,
+                                damage = damage,
+                            })
+                        end
+                    else
+                        humanoid:TakeDamage(damage)
                     end
                 end
             end
