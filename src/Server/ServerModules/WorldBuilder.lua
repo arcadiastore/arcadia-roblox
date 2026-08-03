@@ -1,18 +1,24 @@
 --[[
     WorldBuilder.lua
-    Spawns NPCs and Monsters with patrol behavior
+    Spawns NPCs and Monsters with patrol + combat AI
 ]]
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
 
 local WorldBuilder = {}
 
--- Patrol settings
-local PATROL_RADIUS = 15  -- studs from spawn
-local PATROL_SPEED = 3    -- studs per second
-local PATROL_WAIT_MIN = 2 -- seconds
-local PATROL_WAIT_MAX = 5 -- seconds
+-- Settings
+local PATROL_RADIUS = 15
+local PATROL_SPEED = 3
+local PATROL_WAIT_MIN = 2
+local PATROL_WAIT_MAX = 5
+local CHASE_RANGE = 20     -- Detect player within this range
+local ATTACK_RANGE = 8     -- Attack player within this range
+local RETURN_RANGE = 30    -- Return to spawn if player goes beyond this
+local ATTACK_COOLDOWN = 2  -- Seconds between monster attacks
 
 -- Create name tag (BillboardGui)
 local function createNameTag(parent, name, color)
@@ -36,42 +42,150 @@ local function createNameTag(parent, name, color)
     return billboard
 end
 
--- Start patrol behavior for a monster
-local function startPatrol(monster, spawnPos)
-    task.spawn(function()
-        while monster and monster.Parent do
-            -- Check if monster is alive
-            local hp = monster:GetAttribute("CurrentHP") or 0
-            if hp <= 0 then
-                -- Dead: wait for respawn
-                task.wait(2)
+-- Get nearest player to a position
+local function getNearestPlayer(pos, maxRange)
+    local nearest = nil
+    local nearestDist = maxRange
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local char = plr.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local hum = char:FindFirstChild("Humanoid")
+            if root and hum and hum.Health > 0 then
+                local dist = (root.Position - pos).Magnitude
+                if dist < nearestDist then
+                    nearestDist = dist
+                    nearest = {player = plr, rootPart = root, dist = dist}
+                end
+            end
+        end
+    end
+    
+    return nearest
+end
+
+-- Monster AI loop
+local function monsterAI(monster, spawnPos, monsterData)
+    local state = "PATROL"  -- PATROL, CHASE, ATTACK, RETURN
+    local currentTween = nil
+    local lastAttackTime = 0
+    
+    while monster and monster.Parent do
+        local hp = monster:GetAttribute("CurrentHP") or 0
+        
+        -- Dead: wait for respawn
+        if hp <= 0 then
+            state = "PATROL"
+            if currentTween then currentTween:Cancel() currentTween = nil end
+            task.wait(2)
+            continue
+        end
+        
+        local monsterPos = monster.Position
+        
+        if state == "PATROL" then
+            -- Check for nearby players
+            local target = getNearestPlayer(monsterPos, CHASE_RANGE)
+            if target then
+                state = "CHASE"
+                if currentTween then currentTween:Cancel() currentTween = nil end
                 continue
             end
             
-            -- Pick random point near spawn
-            local angle = math.random() * math.pi * 2
-            local distance = math.random() * PATROL_RADIUS
-            local offsetX = math.cos(angle) * distance
-            local offsetZ = math.sin(angle) * distance
-            local targetPos = spawnPos + Vector3.new(offsetX, spawnPos.Y, offsetZ)
+            -- Random patrol movement
+            if not currentTween or not currentTween.PlaybackState == Enum.PlaybackState.Playing then
+                local angle = math.random() * math.pi * 2
+                local distance = math.random() * PATROL_RADIUS
+                local targetPos = spawnPos + Vector3.new(math.cos(angle) * distance, spawnPos.Y, math.sin(angle) * distance)
+                local dist = (targetPos - monster.Position).Magnitude
+                local duration = math.max(dist / PATROL_SPEED, 0.5)
+                
+                currentTween = TweenService:Create(monster, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Position = targetPos})
+                currentTween:Play()
+            end
             
-            -- Calculate tween duration
-            local dist = (targetPos - monster.Position).Magnitude
-            local duration = math.max(dist / PATROL_SPEED, 0.5)
+            task.wait(1)
             
-            -- Tween to target
-            local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-            local tween = TweenService:Create(monster, tweenInfo, {Position = targetPos})
-            tween:Play()
+        elseif state == "CHASE" then
+            local target = getNearestPlayer(monsterPos, RETURN_RANGE)
             
-            -- Wait for tween to finish
-            tween.Completed:Wait()
+            if not target then
+                -- Player left area, return to spawn
+                state = "RETURN"
+                if currentTween then currentTween:Cancel() currentTween = nil end
+                continue
+            end
             
-            -- Wait at destination
-            local waitTime = math.random(PATROL_WAIT_MIN * 10, PATROL_WAIT_MAX * 10) / 10
-            task.wait(waitTime)
+            if target.dist <= ATTACK_RANGE then
+                -- Close enough to attack
+                state = "ATTACK"
+                if currentTween then currentTween:Cancel() currentTween = nil end
+                continue
+            end
+            
+            -- Move toward player
+            monster.Position = monster.Position:Lerp(target.rootPart.Position, 0.1)
+            
+            task.wait(0.3)
+            
+        elseif state == "ATTACK" then
+            local target = getNearestPlayer(monsterPos, ATTACK_RANGE + 2)
+            
+            if not target then
+                state = "RETURN"
+                continue
+            end
+            
+            if target.dist > ATTACK_RANGE + 2 then
+                -- Player moved away, chase again
+                state = "CHASE"
+                continue
+            end
+            
+            -- Attack with cooldown
+            local now = tick()
+            if now - lastAttackTime >= ATTACK_COOLDOWN then
+                lastAttackTime = now
+                
+                -- Deal damage to player
+                local humanoid = target.rootPart.Parent:FindFirstChild("Humanoid")
+                if humanoid then
+                    local damage = monsterData.atk or 5
+                    humanoid:TakeDamage(damage)
+                    
+                    -- Notify client of monster attack
+                    local events = game.ReplicatedStorage:FindFirstChild("Events")
+                    if events then
+                        events.UpdateEvent:FireClient(target.player, {
+                            type = "MonsterAttack",
+                            monsterName = monsterData.name,
+                            damage = damage,
+                        })
+                    end
+                end
+            end
+            
+            -- Face player
+            local dir = (target.rootPart.Position - monsterPos).Unit
+            monster.CFrame = CFrame.lookAt(monsterPos, monsterPos + Vector3.new(dir.X, 0, dir.Z))
+            
+            task.wait(0.5)
+            
+        elseif state == "RETURN" then
+            -- Move back to spawn
+            local dist = (spawnPos - monster.Position).Magnitude
+            if dist > 2 then
+                monster.Position = monster.Position:Lerp(spawnPos, 0.1)
+                task.wait(0.3)
+            else
+                -- Arrived at spawn
+                monster.Position = spawnPos
+                state = "PATROL"
+                task.wait(1)
+            end
         end
-    end)
+    end
 end
 
 -- Spawn all NPCs
@@ -93,21 +207,18 @@ function WorldBuilder:SpawnNPCs()
         npc:SetAttribute("HasShop", npcData.hasShop or false)
         npc.Parent = npcFolder
         
-        -- Add ClickDetector
         local clickDetector = Instance.new("ClickDetector")
         clickDetector.MaxActivationDistance = 20
         clickDetector.Parent = npc
         
-        -- Add name tag
         createNameTag(npc, npcData.name, Color3.fromRGB(100, 255, 100))
-        
-        print("[World] NPC spawned: " .. npcData.name .. " at " .. tostring(npcData.position))
+        print("[World] NPC spawned: " .. npcData.name)
     end
     
     print("[World] All NPCs spawned!")
 end
 
--- Spawn all monsters with patrol
+-- Spawn all monsters with AI
 function WorldBuilder:SpawnMonsters()
     local monsterFolder = Instance.new("Folder")
     monsterFolder.Name = "Monsters"
@@ -132,15 +243,12 @@ function WorldBuilder:SpawnMonsters()
                 monster:SetAttribute("SpawnPos", tostring(pos))
                 monster.Parent = monsterFolder
                 
-                -- Add ClickDetector
                 local clickDetector = Instance.new("ClickDetector")
                 clickDetector.MaxActivationDistance = 20
                 clickDetector.Parent = monster
                 
-                -- Add name tag with HP
                 local billboard = createNameTag(monster, monsterData.name, Color3.fromRGB(255, 100, 100))
                 
-                -- HP label
                 local hpLabel = Instance.new("TextLabel")
                 hpLabel.Name = "HPLabel"
                 hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
@@ -153,8 +261,10 @@ function WorldBuilder:SpawnMonsters()
                 hpLabel.TextScaled = true
                 hpLabel.Parent = billboard
                 
-                -- Start patrol
-                startPatrol(monster, spawnPos)
+                -- Start monster AI
+                task.spawn(function()
+                    monsterAI(monster, spawnPos, monsterData)
+                end)
                 
                 print("[World] Monster spawned: " .. monsterData.name .. " at " .. tostring(pos))
             end

@@ -144,6 +144,10 @@ UpdateEvent.OnClientEvent:Connect(function(data)
         local questName = data.questName or "Quest"
         Notification:QuestReady(questName, npcName)
         
+    elseif data.type == "MonsterAttack" then
+        -- Show monster attack notification
+        Notification:Show(data.monsterName .. " menyerang! -" .. data.damage .. " HP", Color3.fromRGB(255, 80, 80), 2)
+        
     elseif data.type == "MonsterRespawn" then
         -- Reset HP display on respawned monster
         local monsterFolder = workspace:FindFirstChild("Monsters")
