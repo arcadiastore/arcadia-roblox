@@ -42,7 +42,7 @@ local DialogueEvent = Events:WaitForChild("DialogueEvent")
 local UpdateEvent = Events:WaitForChild("UpdateEvent")
 local EquipEvent = Events:WaitForChild("EquipEvent")
 local InventoryEvent = Events:WaitForChild("InventoryEvent")
-local RespawnEvent = Events:WaitForChild("RespawnEvent")
+local RespawnEvent = Events:FindFirstChild("RespawnEvent") or Events:WaitForChild("RespawnEvent", 10)
 
 print("[Client] Events found!")
 
