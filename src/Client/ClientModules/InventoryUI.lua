@@ -491,7 +491,10 @@ function InventoryUI:Update(data)
         goldLabel.Text = "Gold: " .. (data.gold or 0)
     end
     
-    self:RefreshItems()
+    -- Always refresh if inventory is open
+    if isOpen then
+        self:RefreshItems()
+    end
 end
 
 function InventoryUI:Toggle()
@@ -499,9 +502,10 @@ function InventoryUI:Toggle()
     if gui then
         gui.Enabled = isOpen
         if isOpen then
+            -- Small delay to let GUI render, then refresh
+            task.wait(0.1)
             self:RefreshItems()
         else
-            -- Close detail when closing inventory
             if detailFrame then
                 detailFrame.Visible = false
             end
