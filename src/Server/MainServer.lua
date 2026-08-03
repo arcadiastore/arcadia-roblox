@@ -85,21 +85,37 @@ print("[Server] Events created!")
 Players.PlayerAdded:Connect(function(player)
     PlayerData:Init(player)
     
-    -- Send initial data after character loads
+    -- Track when character dies
     player.CharacterAdded:Connect(function(character)
-        -- Wait for Humanoid to be ready
         local humanoid = character:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.Died:Connect(function()
+                -- Reset HP in data immediately on death
+                local pData = PlayerData:Get(player)
+                if pData then
+                    pData.hp = 0
+                    PlayerData:SendUpdate(player, events)
+                    print("[Server] " .. player.Name .. " died - HP set to 0")
+                end
+            end)
+        end
         
-        -- Reset HP to max on respawn
+        -- Reset HP to max on respawn (after death)
+        task.wait(2)  -- Wait for respawn to complete
+        
         local pData = PlayerData:Get(player)
         if pData then
             pData.hp = pData.maxHp or 100
             pData.mp = pData.maxMp or 50
             
-            -- Sync Humanoid HP
-            if humanoid then
-                humanoid.MaxHealth = pData.maxHp or 100
-                humanoid.Health = pData.maxHp or 100
+            -- Get new Humanoid (after respawn)
+            local newChar = player.Character
+            if newChar then
+                local newHumanoid = newChar:FindFirstChild("Humanoid")
+                if newHumanoid then
+                    newHumanoid.MaxHealth = pData.maxHp or 100
+                    newHumanoid.Health = pData.maxHp or 100
+                end
             end
             
             PlayerData:SendUpdate(player, events)
