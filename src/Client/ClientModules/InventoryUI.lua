@@ -1,6 +1,6 @@
 --[[
     InventoryUI.lua
-    Inventory panel with tabs: Consumable, Material, Equipment
+    Inventory panel with tabs + item detail popup (INFORMATIF!)
 ]]
 
 local InventoryUI = {}
@@ -13,6 +13,105 @@ local currentTab = "consumable"
 
 local tabButtons = {}
 local scrollFrame = nil
+local detailFrame = nil
+
+-- Build detail text for an item
+local function buildDetailText(itemData, slot)
+    local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
+    local text = ""
+    
+    -- Name + count
+    local countText = (slot and slot.count and slot.count > 1) and (" x" .. slot.count) or ""
+    text = text .. itemData.name .. countText .. "\n"
+    
+    -- Type
+    local typeNames = {
+        consumable = "Konsumsi",
+        material = "Material",
+        equipment = "Equipment",
+    }
+    text = text .. "Tipe: " .. (typeNames[itemData.type] or itemData.type or "Unknown") .. "\n"
+    
+    -- Slot (for equipment)
+    if itemData.slot then
+        local slotNames = {
+            hat = "Kepala",
+            tshirt = "Baju",
+            pants = "Celana",
+            shoes = "Sepatu",
+            ringLeft = "Cincin Kiri",
+            ringRight = "Cincin Kanan",
+            necklace = "Kalung",
+            weapon1h = "Senjata 1T",
+            weapon2h = "Senjata 2T",
+            wings = "Sayap",
+            costume = "Kostum",
+        }
+        text = text .. "Slot: " .. (slotNames[itemData.slot] or itemData.slot) .. "\n"
+    end
+    
+    text = text .. "\n"
+    
+    -- Description
+    text = text .. itemData.description .. "\n"
+    
+    -- Stats (for equipment)
+    if itemData.stats then
+        text = text .. "\nStats:\n"
+        local statNames = {
+            atk = "ATK",
+            def = "DEF",
+            matk = "MATK",
+            spd = "SPD",
+            luk = "LUK",
+            hp = "HP",
+            mp = "MP",
+        }
+        for stat, value in pairs(itemData.stats) do
+            local prefix = value > 0 and "+" or ""
+            text = text .. "  " .. (statNames[stat] or stat) .. " " .. prefix .. value .. "\n"
+        end
+    end
+    
+    -- Range (for weapons)
+    if itemData.range then
+        local rangeType = itemData.range > 15 and "Ranged" or "Melee"
+        text = text .. "\nJarak: " .. itemData.range .. " (" .. rangeType .. ")\n"
+    end
+    
+    -- Level requirement
+    if itemData.levelReq and itemData.levelReq > 1 then
+        text = text .. "\nLevel: " .. itemData.levelReq .. "+\n"
+    end
+    
+    -- Job requirement
+    if itemData.jobReq then
+        text = text .. "Job: "
+        for i, job in ipairs(itemData.jobReq) do
+            if i > 1 then text = text .. ", " end
+            text = text .. job
+        end
+        text = text .. "\n"
+    end
+    
+    -- Price
+    if itemData.price then
+        text = text .. "\nHarga Beli: " .. itemData.price .. " Gold\n"
+    end
+    if itemData.sellPrice then
+        text = text .. "Harga Jual: " .. itemData.sellPrice .. " Gold\n"
+    end
+    
+    -- Consumable effect
+    if itemData.healHP then
+        text = text .. "\nEfek: Pulihkan " .. itemData.healHP .. " HP\n"
+    end
+    if itemData.healMP then
+        text = text .. "Efek: Pulihkan " .. itemData.healMP .. " MP\n"
+    end
+    
+    return text
+end
 
 function InventoryUI:Create(playerGui)
     gui = Instance.new("ScreenGui")
@@ -130,7 +229,141 @@ function InventoryUI:Create(playerGui)
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
     end)
     
+    -- Detail popup (hidden by default)
+    detailFrame = Instance.new("Frame")
+    detailFrame.Name = "DetailPopup"
+    detailFrame.Size = UDim2.new(0, 280, 0, 350)
+    detailFrame.Position = UDim2.new(0.5, -140, 0.5, -175)
+    detailFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    detailFrame.BackgroundTransparency = 0.05
+    detailFrame.BorderSizePixel = 0
+    detailFrame.Visible = false
+    detailFrame.Parent = gui
+    Instance.new("UICorner", detailFrame).CornerRadius = UDim.new(0, 10)
+    
+    -- Detail title
+    local detailTitle = Instance.new("TextLabel")
+    detailTitle.Name = "DetailTitle"
+    detailTitle.Size = UDim2.new(1, -20, 0, 25)
+    detailTitle.Position = UDim2.new(0, 10, 0, 5)
+    detailTitle.BackgroundTransparency = 1
+    detailTitle.Text = "Detail Item"
+    detailTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
+    detailTitle.Font = Enum.Font.GothamBold
+    detailTitle.TextScaled = true
+    detailTitle.TextXAlignment = Enum.TextXAlignment.Left
+    detailTitle.Parent = detailFrame
+    
+    -- Detail content (scrollable)
+    local detailScroll = Instance.new("ScrollingFrame")
+    detailScroll.Name = "DetailContent"
+    detailScroll.Size = UDim2.new(1, -20, 1, -75)
+    detailScroll.Position = UDim2.new(0, 10, 0, 32)
+    detailScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    detailScroll.BorderSizePixel = 0
+    detailScroll.ScrollBarThickness = 4
+    detailScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    detailScroll.Parent = detailFrame
+    Instance.new("UICorner", detailScroll).CornerRadius = UDim.new(0, 6)
+    
+    local detailText = Instance.new("TextLabel")
+    detailText.Name = "DetailText"
+    detailText.Size = UDim2.new(1, -10, 0, 0)
+    detailText.Position = UDim2.new(0, 5, 0, 0)
+    detailText.BackgroundTransparency = 1
+    detailText.Text = ""
+    detailText.TextColor3 = Color3.fromRGB(220, 220, 220)
+    detailText.Font = Enum.Font.Gotham
+    detailText.TextScaled = false
+    detailText.TextSize = 14
+    detailText.TextWrapped = true
+    detailText.TextXAlignment = Enum.TextXAlignment.Left
+    detailText.TextYAlignment = Enum.TextYAlignment.Top
+    detailText.AutomaticSize = Enum.AutomaticSize.Y
+    detailText.Parent = detailScroll
+    
+    detailText:GetPropertyChangedSignal("TextBounds"):Connect(function()
+        detailScroll.CanvasSize = UDim2.new(0, 0, 0, detailText.TextBounds.Y + 10)
+    end)
+    
+    -- Detail action button
+    local detailActionBtn = Instance.new("TextButton")
+    detailActionBtn.Name = "ActionBtn"
+    detailActionBtn.Size = UDim2.new(0.45, -5, 0, 30)
+    detailActionBtn.Position = UDim2.new(0.05, 0, 1, -38)
+    detailActionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    detailActionBtn.Text = "Equip"
+    detailActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    detailActionBtn.Font = Enum.Font.GothamBold
+    detailActionBtn.TextScaled = true
+    detailActionBtn.Parent = detailFrame
+    Instance.new("UICorner", detailActionBtn).CornerRadius = UDim.new(0, 6)
+    
+    -- Detail close button
+    local detailCloseBtn = Instance.new("TextButton")
+    detailCloseBtn.Name = "CloseBtn"
+    detailCloseBtn.Size = UDim2.new(0.45, -5, 0, 30)
+    detailCloseBtn.Position = UDim2.new(0.5, 0, 1, -38)
+    detailCloseBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    detailCloseBtn.Text = "Tutup"
+    detailCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    detailCloseBtn.Font = Enum.Font.GothamBold
+    detailCloseBtn.TextScaled = true
+    detailCloseBtn.Parent = detailFrame
+    Instance.new("UICorner", detailCloseBtn).CornerRadius = UDim.new(0, 6)
+    
+    detailCloseBtn.MouseButton1Click:Connect(function()
+        detailFrame.Visible = false
+    end)
+    
+    -- Store references for detail popup
+    self._detailFrame = detailFrame
+    self._detailActionBtn = detailActionBtn
+    
     print("[InventoryUI] Created!")
+end
+
+-- Show item detail popup
+function InventoryUI:ShowDetail(itemData, slot)
+    if not detailFrame then return end
+    
+    local detailText = detailFrame:FindFirstChild("DetailContent", true) and detailFrame.DetailContent:FindFirstChild("DetailText")
+    if detailText then
+        detailText.Text = buildDetailText(itemData, slot)
+    end
+    
+    -- Update action button
+    local actionBtn = self._detailActionBtn
+    if actionBtn then
+        actionBtn.MouseButton1Click:Connect(function() end)  -- Disconnect old
+        
+        if itemData.type == "equipment" then
+            actionBtn.Text = "Equip"
+            actionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+            actionBtn.MouseButton1Click:Connect(function()
+                local equipEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("EquipEvent")
+                if equipEvent then
+                    equipEvent:FireServer("equip", {itemId = itemData.id})
+                end
+                detailFrame.Visible = false
+            end)
+        elseif itemData.type == "consumable" then
+            actionBtn.Text = "Use"
+            actionBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
+            actionBtn.MouseButton1Click:Connect(function()
+                local invEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("InventoryEvent")
+                if invEvent then
+                    invEvent:FireServer("use", {itemId = itemData.id})
+                end
+                detailFrame.Visible = false
+            end)
+        else
+            actionBtn.Text = "OK"
+            actionBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+    end
+    
+    detailFrame.Visible = true
 end
 
 function InventoryUI:RefreshItems()
@@ -171,7 +404,7 @@ function InventoryUI:RefreshItems()
         end
     end
     
-    -- Sort: newest first (reverse order), then by name
+    -- Sort: newest first
     for i = 1, math.floor(#items / 2) do
         local j = #items - i + 1
         items[i], items[j] = items[j], items[i]
@@ -242,19 +475,22 @@ function InventoryUI:RefreshItems()
             actionBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
             actionBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
         end
+        
+        -- Click entire row to show detail
+        btn.MouseButton1Click:Connect(function()
+            self:ShowDetail(itemData, slot)
+        end)
     end
 end
 
 function InventoryUI:Update(data)
     playerData = data
     
-    -- Update gold
     local goldLabel = frame and frame:FindFirstChild("GoldLabel", true)
     if goldLabel then
         goldLabel.Text = "Gold: " .. (data.gold or 0)
     end
     
-    -- Refresh items
     self:RefreshItems()
 end
 
@@ -264,6 +500,11 @@ function InventoryUI:Toggle()
         gui.Enabled = isOpen
         if isOpen then
             self:RefreshItems()
+        else
+            -- Close detail when closing inventory
+            if detailFrame then
+                detailFrame.Visible = false
+            end
         end
     end
 end
