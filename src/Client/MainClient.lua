@@ -91,7 +91,7 @@ local function showDeathScreen()
     
     deathGui = Instance.new("ScreenGui")
     deathGui.Name = "DeathScreen"
-    deathGui.ResetOnSpawn = true
+    deathGui.ResetOnSpawn = false
     deathGui.Parent = playerGui
     
     -- Dark overlay

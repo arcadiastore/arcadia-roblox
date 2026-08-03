@@ -11,6 +11,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Disable auto-respawn (handle manually)
+Players.CharacterAutoLoads = false
+
 print("[Server] ==========================================")
 print("[Server] Arcadia Online Server Starting...")
 print("[Server] ==========================================")
@@ -86,6 +89,9 @@ print("[Server] Events created!")
 Players.PlayerAdded:Connect(function(player)
     PlayerData:Init(player)
     
+    -- Load initial character
+    player:LoadCharacter()
+    
     -- Track when character dies
     player.CharacterAdded:Connect(function(character)
         local humanoid = character:WaitForChild("Humanoid", 5)
@@ -129,6 +135,10 @@ RespawnEvent.OnServerEvent:Connect(function(player, choice)
     -- Reset HP
     pData.hp = pData.maxHp or 100
     pData.mp = pData.maxMp or 50
+    
+    -- Load character (respawn)
+    player:LoadCharacter()
+    task.wait(1)
     
     -- Teleport player and reset Humanoid
     local character = player.Character
