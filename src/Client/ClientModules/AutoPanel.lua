@@ -146,37 +146,14 @@ local function sendResponse(text, npcId)
     end
 end
 
--- Report quest and accept next via dialogue
+-- Report: just talk to NPC, then STOP (player must choose manually)
 local function doReporting(npcId, questId)
-    -- Step 1: Talk to NPC
+    -- Talk to NPC to open dialogue
     interactNPC(npcId)
-    task.wait(2)
-    
-    -- Step 2: Take reward
-    sendResponse("Terima kasih! (Ambil Reward)", npcId)
-    task.wait(1.5)
-    
-    -- Step 3: Close dialogue
-    sendResponse("Sama-sama!", npcId)
-    task.wait(1)
-    sendResponse("exit", npcId)
-    task.wait(1.5)
-    
-    -- Step 4: Talk again for new quest
-    interactNPC(npcId)
-    task.wait(2)
-    
-    -- Step 5: Ask for quest
-    sendResponse("Ada tugas untuk saya?", npcId)
-    task.wait(1.5)
-    
-    -- Step 6: Accept quest
-    sendResponse("✓ Saya terima quest ini!", npcId)
-    task.wait(1)
-    sendResponse("exit", npcId)
     task.wait(1)
     
-    print("[AutoPanel] Reporting done for quest: " .. tostring(questId))
+    -- STOP auto quest - player must choose manually
+    print("[AutoPanel] Dialogue opened - player must choose!")
 end
 
 -- Main auto quest loop
@@ -237,21 +214,14 @@ local function autoQuestLoop()
             stopMoving()
             doReporting(autoQuestNPC, autoQuestId)
             
-            -- Reset for next cycle
+            -- STOP auto quest - player must choose manually
+            autoQuestActive = false
             autoQuestPhase = "idle"
             local prevNPC = autoQuestNPC
             autoQuestId = nil
             autoQuestNPC = nil
             autoQuestTarget = nil
             currentTarget = nil
-            
-            -- Wait then restart cycle with same NPC
-            task.wait(3)
-            
-            -- Check if there's a new quest from same NPC
-            -- The doReporting should have accepted new quest
-            -- Reset to fighting if we have a new quest target
-            autoQuestPhase = "idle"
             
         -- Phase: Idle
         elseif autoQuestPhase == "idle" then
