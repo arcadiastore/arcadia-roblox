@@ -263,7 +263,6 @@ Items["iron_helmet"] = {
     price = 250,
     sellPrice = 125,
     levelReq = 5,
-    jobReq = {"Warrior"},
     stats = {def = 5, hp = 10},
 }
 
@@ -276,7 +275,6 @@ Items["mage_hat"] = {
     price = 200,
     sellPrice = 100,
     levelReq = 3,
-    jobReq = {"Mage"},
     stats = {matk = 3, mdef = 2},
 }
 
@@ -305,7 +303,6 @@ Items["iron_chestplate"] = {
     price = 500,
     sellPrice = 250,
     levelReq = 7,
-    jobReq = {"Warrior"},
     stats = {def = 12, hp = 20},
 }
 
@@ -318,7 +315,6 @@ Items["cloth_robe"] = {
     price = 200,
     sellPrice = 100,
     levelReq = 3,
-    jobReq = {"Mage"},
     stats = {def = 2, matk = 3, mp = 15},
 }
 

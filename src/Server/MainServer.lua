@@ -87,7 +87,8 @@ Players.PlayerAdded:Connect(function(player)
     
     -- Send initial data after character loads
     player.CharacterAdded:Connect(function(character)
-        task.wait(1)
+        -- Wait for Humanoid to be ready
+        local humanoid = character:WaitForChild("Humanoid", 5)
         
         -- Reset HP to max on respawn
         local pData = PlayerData:Get(player)
@@ -96,14 +97,14 @@ Players.PlayerAdded:Connect(function(player)
             pData.mp = pData.maxMp or 50
             
             -- Sync Humanoid HP
-            local humanoid = character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.MaxHealth = pData.maxHp or 100
-                humanoid.Health = pData.hp
+                humanoid.Health = pData.maxHp or 100
             end
+            
+            PlayerData:SendUpdate(player, events)
+            print("[Server] " .. player.Name .. " respawned - HP reset to " .. pData.hp)
         end
-        
-        PlayerData:SendUpdate(player, events)
     end)
 end)
 
