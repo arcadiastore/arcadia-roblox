@@ -86,8 +86,23 @@ Players.PlayerAdded:Connect(function(player)
     PlayerData:Init(player)
     
     -- Send initial data after character loads
-    player.CharacterAdded:Connect(function()
+    player.CharacterAdded:Connect(function(character)
         task.wait(1)
+        
+        -- Reset HP to max on respawn
+        local pData = PlayerData:Get(player)
+        if pData then
+            pData.hp = pData.maxHp or 100
+            pData.mp = pData.maxMp or 50
+            
+            -- Sync Humanoid HP
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.MaxHealth = pData.maxHp or 100
+                humanoid.Health = pData.hp
+            end
+        end
+        
         PlayerData:SendUpdate(player, events)
     end)
 end)
