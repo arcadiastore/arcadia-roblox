@@ -464,7 +464,9 @@ function SkillBar:UseSkill(slotIndex)
     
     -- Fire skill event
     print("[SkillBar] Finding SkillEvent...")
-    local SkillEvent = game.ReplicatedStorage:FindFirstChild("SkillEvent")
+    local EventsFolder = game.ReplicatedStorage:FindFirstChild("Events")
+    print("[SkillBar] Events folder: " .. tostring(EventsFolder))
+    local SkillEvent = EventsFolder and EventsFolder:FindFirstChild("SkillEvent")
     print("[SkillBar] SkillEvent: " .. tostring(SkillEvent))
     if not SkillEvent then 
         warn("[SkillBar] SkillEvent not found!")
