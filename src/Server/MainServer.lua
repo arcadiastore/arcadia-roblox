@@ -89,30 +89,26 @@ print("[Server] Events created!")
 Players.PlayerAdded:Connect(function(player)
     PlayerData:Init(player)
     
-    -- Load initial character
-    player:LoadCharacter()
-    
-    -- Track when character dies
+    -- Track when character dies (connect FIRST)
     player.CharacterAdded:Connect(function(character)
         local humanoid = character:WaitForChild("Humanoid", 5)
         if humanoid then
             humanoid.Died:Connect(function()
-                -- Reset HP in data immediately on death
                 local pData = PlayerData:Get(player)
                 if pData then
                     pData.hp = 0
                     PlayerData:SendUpdate(player, events)
-                    
-                    -- Send death notification with respawn options
                     events.UpdateEvent:FireClient(player, {
                         type = "PlayerDied",
-                        checkpointName = "Checkpoint",  -- Will be replaced with actual name
                     })
                     print("[Server] " .. player.Name .. " died")
                 end
             end)
         end
     end)
+    
+    -- Load initial character (AFTER connecting CharacterAdded)
+    player:LoadCharacter()
 end)
 
 -- Handle respawn choice
@@ -169,9 +165,26 @@ for _, player in ipairs(Players:GetPlayers()) do
     if not PlayerData:Get(player) then
         print("[Server] Late init for: " .. player.Name)
         PlayerData:Init(player)
-        if player.Character then
-            task.wait(1)
-            PlayerData:SendUpdate(player, events)
+        
+        -- Connect CharacterAdded for late joiners
+        player.CharacterAdded:Connect(function(character)
+            local humanoid = character:WaitForChild("Humanoid", 5)
+            if humanoid then
+                humanoid.Died:Connect(function()
+                    local pData = PlayerData:Get(player)
+                    if pData then
+                        pData.hp = 0
+                        PlayerData:SendUpdate(player, events)
+                        events.UpdateEvent:FireClient(player, {type = "PlayerDied"})
+                        print("[Server] " .. player.Name .. " died")
+                    end
+                end)
+            end
+        end)
+        
+        -- Load character if not already loaded
+        if not player.Character then
+            player:LoadCharacter()
         end
     end
 end
