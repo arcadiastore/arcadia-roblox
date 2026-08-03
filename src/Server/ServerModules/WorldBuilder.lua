@@ -181,6 +181,15 @@ local function monsterAI(monster, spawnPos, monsterData)
                                 monsterName = monsterData.name,
                                 damage = damage,
                             })
+                            
+                            -- Check if player died
+                            if pData.hp <= 0 then
+                                -- Send death event
+                                events.UpdateEvent:FireClient(target.player, {
+                                    type = "PlayerDied",
+                                })
+                                print("[World] " .. target.player.Name .. " killed by " .. monsterData.name)
+                            end
                         end
                     else
                         humanoid:TakeDamage(damage)

@@ -130,16 +130,23 @@ RespawnEvent.OnServerEvent:Connect(function(player, choice)
     pData.hp = pData.maxHp or 100
     pData.mp = pData.maxMp or 50
     
-    -- Teleport player
+    -- Teleport player and reset Humanoid
     local character = player.Character
     if character then
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         if rootPart then
             rootPart.CFrame = CFrame.new(spawnPos + Vector3.new(0, 3, 0))
         end
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.MaxHealth = pData.maxHp or 100
+            humanoid.Health = pData.maxHp or 100
+        end
     end
     
     PlayerData:SendUpdate(player, events)
+    print("[Server] " .. player.Name .. " respawned - HP: " .. pData.hp .. "/" .. pData.maxHp)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
