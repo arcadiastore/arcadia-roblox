@@ -108,7 +108,7 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    PlayerData:Save(player)
+    -- PlayerData:Save(player) -- Disabled in Studio mode
     PlayerData:Remove(player)
 end)
 
