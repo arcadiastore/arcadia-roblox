@@ -7,6 +7,24 @@ local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
 
 local CombatSystem = {}
 
+-- Anti-spam: track last attack time per player
+local lastAttackTime = {}
+
+-- Get attack cooldown based on weapon (seconds)
+local function getAttackCooldown(playerData)
+    local GameDataItems = GameData.Items or {}
+    local weaponId = playerData.equipment.weapon1h or playerData.equipment.weapon2h
+    if weaponId and GameDataItems[weaponId] then
+        local wData = GameDataItems[weaponId]
+        -- Weapon attack speed (lower = faster): sword=1.0, dagger=0.6, staff=1.5, bow=1.2
+        if wData.stats and wData.stats.spd then
+            -- Higher SPD stat = faster attack (lower cooldown)
+            return math.max(0.4, 1.2 - (wData.stats.spd * 0.05))
+        end
+    end
+    return 1.0  -- Default: 1 attack per second (fist)
+end
+
 -- Handle attack event
 function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
     print("[Combat] HandleAttack called by " .. player.Name)
@@ -16,14 +34,26 @@ function CombatSystem:HandleAttack(player, monsterPart, playerData, events)
         return
     end
     
+    -- ANTI-SPAM: Check attack cooldown
+    local now = tick()
+    local data = playerData:Get(player)
+    if not data then return end
+    
+    local cooldown = getAttackCooldown(data)
+    if lastAttackTime[player.UserId] then
+        local elapsed = now - lastAttackTime[player.UserId]
+        if elapsed < cooldown then
+            -- Too fast! Reject attack
+            return
+        end
+    end
+    lastAttackTime[player.UserId] = now
+    
     -- MELEE RANGE CHECK - based on equipped weapon
     local character = player.Character
     if not character then return end
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
-    
-    local data = playerData:Get(player)
-    if not data then return end
     
     local attackRange = GameData:GetAttackRange(data)
     local dist = (monsterPart.Position - rootPart.Position).Magnitude

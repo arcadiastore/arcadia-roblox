@@ -1,6 +1,6 @@
 --[[
     EquipmentUI.lua
-    Equipment panel - equip/unequip items
+    Equipment panel - equip/unequip items with job validation
 ]]
 
 local EquipmentUI = {}
@@ -35,13 +35,12 @@ function EquipmentUI:Create(playerGui)
     
     -- Main frame
     frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 350, 0, 400)
-    frame.Position = UDim2.new(0.5, -175, 0.5, -200)
+    frame.Size = UDim2.new(0, 380, 0, 460)
+    frame.Position = UDim2.new(0.5, -190, 0.5, -230)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     frame.BackgroundTransparency = 0.1
     frame.BorderSizePixel = 0
     frame.Parent = gui
-    
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
     
     -- Title
@@ -75,7 +74,7 @@ function EquipmentUI:Create(playerGui)
     
     -- Stats display
     local statsFrame = Instance.new("Frame")
-    statsFrame.Size = UDim2.new(1, -20, 0, 60)
+    statsFrame.Size = UDim2.new(1, -20, 0, 80)
     statsFrame.Position = UDim2.new(0, 10, 0, 40)
     statsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     statsFrame.BorderSizePixel = 0
@@ -84,102 +83,180 @@ function EquipmentUI:Create(playerGui)
     
     local statsLabel = Instance.new("TextLabel")
     statsLabel.Name = "StatsLabel"
-    statsLabel.Size = UDim2.new(1, -10, 1, -10)
-    statsLabel.Position = UDim2.new(0, 5, 0, 5)
+    statsLabel.Size = UDim2.new(1, -10, 1, -5)
+    statsLabel.Position = UDim2.new(0, 5, 0, 2)
     statsLabel.BackgroundTransparency = 1
-    statsLabel.Text = "ATK: 0 | DEF: 0 | MATK: 0 | SPD: 0"
+    statsLabel.Text = "Stats loading..."
     statsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
     statsLabel.Font = Enum.Font.Gotham
     statsLabel.TextScaled = true
     statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.TextYAlignment = Enum.TextYAlignment.Top
     statsLabel.Parent = statsFrame
     
-    -- Equipment slots grid
+    -- Equipment grid
     local gridFrame = Instance.new("Frame")
-    gridFrame.Size = UDim2.new(1, -20, 0, 250)
-    gridFrame.Position = UDim2.new(0, 10, 0, 110)
+    gridFrame.Size = UDim2.new(1, -20, 0, 280)
+    gridFrame.Position = UDim2.new(0, 10, 0, 130)
     gridFrame.BackgroundTransparency = 1
     gridFrame.Parent = frame
     
+    -- Create slot buttons
     for _, layout in ipairs(slotLayout) do
-        local slotBtn = Instance.new("TextButton")
-        slotBtn.Name = "Slot_" .. layout.slot
-        slotBtn.Size = UDim2.new(0, 70, 0, 55)
-        slotBtn.Position = UDim2.new(0, (layout.col - 1) * 80, 0, (layout.row - 1) * 65)
-        slotBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-        slotBtn.BorderSizePixel = 0
-        slotBtn.Text = ""
-        slotBtn.Parent = gridFrame
-        Instance.new("UICorner", slotBtn).CornerRadius = UDim.new(0, 6)
+        local btn = Instance.new("TextButton")
+        btn.Name = "Slot_" .. layout.slot
+        btn.Size = UDim2.new(0.23, 0, 0, 60)
+        btn.Position = UDim2.new((layout.col - 1) * 0.25, 0, (layout.row - 1) * 0.25, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        btn.BorderSizePixel = 0
+        btn.Text = ""
+        btn.Parent = gridFrame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
         
-        -- Slot label
+        -- Slot name
         local nameLabel = Instance.new("TextLabel")
-        nameLabel.Name = "ItemName"
-        nameLabel.Size = UDim2.new(1, -4, 0, 20)
-        nameLabel.Position = UDim2.new(0, 2, 0, 2)
+        nameLabel.Name = "SlotName"
+        nameLabel.Size = UDim2.new(1, 0, 0, 15)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.Text = layout.label
         nameLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.Font = Enum.Font.Gotham
         nameLabel.TextScaled = true
-        nameLabel.Parent = slotBtn
+        nameLabel.Parent = btn
         
-        -- Item display
+        -- Item name
         local itemLabel = Instance.new("TextLabel")
-        itemLabel.Name = "ItemDisplay"
-        itemLabel.Size = UDim2.new(1, -4, 0, 25)
-        itemLabel.Position = UDim2.new(0, 2, 0, 25)
+        itemLabel.Name = "ItemName"
+        itemLabel.Size = UDim2.new(1, 0, 0, 20)
+        itemLabel.Position = UDim2.new(0, 0, 0, 15)
         itemLabel.BackgroundTransparency = 1
-        itemLabel.Text = "[Empty]"
-        itemLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-        itemLabel.Font = Enum.Font.Gotham
+        itemLabel.Text = ""
+        itemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemLabel.Font = Enum.Font.GothamBold
         itemLabel.TextScaled = true
-        itemLabel.Parent = slotBtn
+        itemLabel.Parent = btn
         
-        equipSlots[layout.slot] = {button = slotBtn, nameLabel = nameLabel, itemLabel = itemLabel}
+        -- Item stats
+        local statsLbl = Instance.new("TextLabel")
+        statsLbl.Name = "ItemStats"
+        statsLbl.Size = UDim2.new(1, 0, 0, 15)
+        statsLbl.Position = UDim2.new(0, 0, 0, 35)
+        statsLbl.BackgroundTransparency = 1
+        statsLbl.Text = ""
+        statsLbl.TextColor3 = Color3.fromRGB(180, 180, 100)
+        statsLbl.Font = Enum.Font.Gotham
+        statsLbl.TextScaled = true
+        statsLbl.Parent = btn
         
-        -- Click to unequip
-        slotBtn.MouseButton1Click:Connect(function()
-            if playerData and playerData.equipment and playerData.equipment[layout.slot] then
-                local equipEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("EquipEvent")
-                if equipEvent then
-                    equipEvent:FireServer("unequip", {slot = layout.slot})
-                end
+        -- Unequip button (X)
+        local unequipBtn = Instance.new("TextButton")
+        unequipBtn.Name = "UnequipBtn"
+        unequipBtn.Size = UDim2.new(0, 18, 0, 18)
+        unequipBtn.Position = UDim2.new(1, -20, 0, 2)
+        unequipBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        unequipBtn.Text = "X"
+        unequipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        unequipBtn.Font = Enum.Font.GothamBold
+        unequipBtn.TextScaled = true
+        unequipBtn.Visible = false
+        unequipBtn.Parent = btn
+        Instance.new("UICorner", unequipBtn).CornerRadius = UDim.new(1, 0)
+        
+        -- Unequip click
+        unequipBtn.MouseButton1Click:Connect(function()
+            local EquipEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("EquipEvent")
+            if EquipEvent then
+                EquipEvent:FireServer("unequip", {slot = layout.slot})
             end
+            task.wait(0.3)
+            self:Update()
         end)
+        
+        equipSlots[layout.slot] = btn
     end
     
-    print("[EquipmentUI] Created!")
+    -- Info label
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Name = "InfoLabel"
+    infoLabel.Size = UDim2.new(1, -20, 0, 30)
+    infoLabel.Position = UDim2.new(0, 10, 1, -40)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.Text = "Klik slot = Unequip | Klik item di Inventory = Equip"
+    infoLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    infoLabel.Font = Enum.Font.Gotham
+    infoLabel.TextScaled = true
+    infoLabel.Parent = frame
 end
 
-function EquipmentUI:Update(data)
-    playerData = data
+function EquipmentUI:Update()
+    if not playerData then return end
+    local GameData = ReplicatedStorage:FindFirstChild("GameData")
+    if not GameData then return end
+    GameData = require(GameData)
+    
+    local data = playerData
+    if not data then return end
     
     -- Update stats
-    local statsLabel = frame and frame:FindFirstChild("StatsLabel", true)
+    local statsLabel = frame:FindFirstChild("StatsLabel", true)
     if statsLabel then
-        statsLabel.Text = string.format("ATK:%d DEF:%d MATK:%d MDEF:%d SPD:%d LUK:%d",
-            data.atk or 0, data.def or 0, data.matk or 0, data.mdef or 0, data.spd or 0, data.luk or 0)
+        statsLabel.Text = string.format(
+            "Job: %s | Lv.%d\nHP: %d/%d | MP: %d/%d\nATK: %d | DEF: %d | SPD: %d",
+            data.job or "None",
+            data.level or 1,
+            data.hp or 0, data.maxHp or 100,
+            data.mp or 0, data.maxMp or 50,
+            data.atk or 10, data.def or 5, data.spd or 5
+        )
     end
     
-    -- Update equipment slots
-    if data.equipment then
-        for slot, itemId in pairs(data.equipment) do
-            local slotUI = equipSlots[slot]
-            if slotUI then
-                if itemId then
-                    local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
-                    local itemData = GameData.Items and GameData.Items[itemId]
-                    slotUI.itemLabel.Text = itemData and itemData.name or itemId
-                    slotUI.itemLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-                    slotUI.button.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-                else
-                    slotUI.itemLabel.Text = "[Empty]"
-                    slotUI.itemLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
-                    slotUI.button.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-                end
+    -- Update each slot
+    for slotName, btn in pairs(equipSlots) do
+        local itemId = data.equipment and data.equipment[slotName]
+        local itemLabel = btn:FindFirstChild("ItemName")
+        local statsLbl = btn:FindFirstChild("ItemStats")
+        local unequipBtn = btn:FindFirstChild("UnequipBtn")
+        
+        if itemId and GameData.Items and GameData.Items[itemId] then
+            local itemData = GameData.Items[itemId]
+            if itemLabel then
+                itemLabel.Text = itemData.name or itemId
+                itemLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
             end
+            if statsLbl then
+                local stats = {}
+                if itemData.stats then
+                    for stat, val in pairs(itemData.stats) do
+                        table.insert(stats, "+" .. val .. " " .. string.upper(stat))
+                    end
+                end
+                statsLbl.Text = table.concat(stats, " ")
+            end
+            if unequipBtn then
+                unequipBtn.Visible = true
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
+        else
+            if itemLabel then
+                itemLabel.Text = "[Kosong]"
+                itemLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+            end
+            if statsLbl then
+                statsLbl.Text = ""
+            end
+            if unequipBtn then
+                unequipBtn.Visible = false
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         end
+    end
+end
+
+function EquipmentUI:SetData(data)
+    playerData = data
+    if isOpen then
+        self:Update()
     end
 end
 
@@ -187,6 +264,9 @@ function EquipmentUI:Toggle()
     isOpen = not isOpen
     if gui then
         gui.Enabled = isOpen
+        if isOpen then
+            self:Update()
+        end
     end
 end
 

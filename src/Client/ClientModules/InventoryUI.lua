@@ -338,15 +338,46 @@ function InventoryUI:ShowDetail(itemData, slot)
         actionBtn.MouseButton1Click:Connect(function() end)  -- Disconnect old
         
         if itemData.type == "equipment" then
-            actionBtn.Text = "Equip"
-            actionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-            actionBtn.MouseButton1Click:Connect(function()
-                local equipEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("EquipEvent")
-                if equipEvent then
-                    equipEvent:FireServer("equip", {itemId = itemData.id})
+            -- Check job requirement
+            local canEquip = true
+            local reason = ""
+            
+            if itemData.jobReq and playerData then
+                canEquip = false
+                for _, job in ipairs(itemData.jobReq) do
+                    if job == playerData.job then
+                        canEquip = true
+                        break
+                    end
                 end
-                detailFrame.Visible = false
-            end)
+                if not canEquip then
+                    reason = "Job " .. (playerData.job or "None") .. " tidak bisa pakai!"
+                end
+            end
+            
+            -- Check level requirement
+            if canEquip and itemData.levelReq and playerData then
+                if (playerData.level or 1) < itemData.levelReq then
+                    canEquip = false
+                    reason = "Level kurang! Butuh Lv." .. itemData.levelReq
+                end
+            end
+            
+            if canEquip then
+                actionBtn.Text = "Equip"
+                actionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+                actionBtn.MouseButton1Click:Connect(function()
+                    local equipEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("EquipEvent")
+                    if equipEvent then
+                        equipEvent:FireServer("equip", {itemId = itemData.id})
+                    end
+                    detailFrame.Visible = false
+                end)
+            else
+                actionBtn.Text = reason
+                actionBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+                actionBtn.MouseButton1Click:Connect(function() end)
+            end
         elseif itemData.type == "consumable" then
             actionBtn.Text = "Use"
             actionBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200)
