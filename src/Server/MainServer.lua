@@ -190,10 +190,6 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     elseif action == "respond" then
         local result = DialogueSystem:Respond(player, pData, data.npcId, data.responseText, events)
         print("[Server] Respond result: " .. tostring(result))
-    elseif action == "auto_report" then
-        -- Auto quest: complete + accept next
-        local completed, accepted = QuestSystem:AutoReport(player, pData, data.npcId, events)
-        print("[Server] AutoReport: completed=" .. tostring(completed) .. " accepted=" .. tostring(accepted))
     end
 end)
 
