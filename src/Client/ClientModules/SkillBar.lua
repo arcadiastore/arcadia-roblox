@@ -396,16 +396,30 @@ function SkillBar:UseSkill(slotIndex)
     local skillId = skills[slotIndex]
     print("[SkillBar] skillId=" .. skillId)
     
-    -- Check if learned
-    if not currentData.learnedSkills[skillId] then
-        warn("[SkillBar] Skill not learned: " .. skillId)
-        print("[SkillBar] learnedSkills keys:")
-        for k, v in pairs(currentData.learnedSkills) do
-            print("  " .. k .. " = " .. tostring(v))
+    -- DEBUG: Check learnedSkills
+    print("[SkillBar] learnedSkills type=" .. type(currentData.learnedSkills))
+    if currentData.learnedSkills then
+        if type(currentData.learnedSkills) == "table" then
+            print("[SkillBar] learnedSkills is table, count=" .. #currentData.learnedSkills)
+            for k, v in pairs(currentData.learnedSkills) do
+                print("[SkillBar]   skill: " .. tostring(k) .. " = " .. tostring(v))
+            end
+            print("[SkillBar] has key '" .. skillId .. "': " .. tostring(currentData.learnedSkills[skillId]))
+        else
+            print("[SkillBar] learnedSkills is not table: " .. tostring(currentData.learnedSkills))
         end
+    else
+        print("[SkillBar] learnedSkills is nil!")
+    end
+    
+    -- Check if learned
+    if not currentData.learnedSkills or not currentData.learnedSkills[skillId] then
+        warn("[SkillBar] Skill NOT learned: " .. skillId)
         SkillBar:ShowNotLearned(slotIndex)
         return
     end
+    
+    print("[SkillBar] Skill IS learned, continuing...")
     
     -- Check cooldown
     if cooldownTimers[skillId] and tick() < cooldownTimers[skillId] then

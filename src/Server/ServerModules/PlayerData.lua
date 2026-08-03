@@ -77,6 +77,18 @@ function PlayerData:SendUpdate(player, events)
     
     local expNeeded = GameData:CalculateExpForLevel(data.level + 1)
     
+    -- Debug learnedSkills
+    if data.learnedSkills then
+        local count = 0
+        for k, v in pairs(data.learnedSkills) do
+            print("[PlayerData] learnedSkills: " .. k .. " = " .. tostring(v))
+            count = count + 1
+        end
+        print("[PlayerData] learnedSkills count: " .. count)
+    else
+        print("[PlayerData] learnedSkills is nil!")
+    end
+    
     events.UpdateEvent:FireClient(player, {
         type = "Update",
         job = data.job,
