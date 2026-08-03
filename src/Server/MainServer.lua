@@ -190,6 +190,10 @@ DialogueEvent.OnServerEvent:Connect(function(player, action, data)
     elseif action == "respond" then
         local result = DialogueSystem:Respond(player, pData, data.npcId, data.responseText, events)
         print("[Server] Respond result: " .. tostring(result))
+    elseif action == "auto_report" then
+        -- Open dialogue with NPC (NOT auto-complete!)
+        local result = DialogueSystem:Talk(player, pData, data.npcId, events)
+        print("[Server] AutoReport talk result: " .. tostring(result))
     end
 end)
 
