@@ -423,17 +423,34 @@ function SkillBar:UseSkill(slotIndex)
     
     -- Check cooldown
     if cooldownTimers[skillId] and tick() < cooldownTimers[skillId] then
+        warn("[SkillBar] Skill on cooldown!")
         SkillBar:ShowOnCooldown(slotIndex)
         return
     end
+    print("[SkillBar] Cooldown OK")
     
     -- Check MP
     local skillData = GameData.Skills and GameData.Skills[skillId]
-    if not skillData then return end
+    print("[SkillBar] skillData from GameData: " .. tostring(skillData))
+    if not skillData then 
+        warn("[SkillBar] skillData is nil! GameData.Skills=" .. tostring(GameData.Skills))
+        if GameData.Skills then
+            print("[SkillBar] Available skills in GameData:")
+            for k, v in pairs(GameData.Skills) do
+                print("  " .. k .. " = " .. tostring(v))
+            end
+        end
+        return 
+    end
+    
+    print("[SkillBar] Current MP: " .. (currentData.mp or 0) .. " / Need: " .. skillData.mpCost)
     if (currentData.mp or 0) < skillData.mpCost then
+        warn("[SkillBar] Not enough MP!")
         SkillBar:ShowNoMP(slotIndex)
         return
     end
+    
+    print("[SkillBar] All checks passed, firing skill...")
     
     -- VISUAL: Button flash animation
     SkillBar:FlashButton(slotIndex)
