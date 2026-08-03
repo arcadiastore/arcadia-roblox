@@ -194,7 +194,9 @@ function EquipmentUI:Update(data)
         playerData = data
     end
     if not playerData then return end
+    if not frame then return end
     if not isOpen then return end
+    
     local GameData = ReplicatedStorage:FindFirstChild("GameData")
     if not GameData then return end
     GameData = require(GameData)
@@ -269,6 +271,10 @@ function EquipmentUI:Toggle()
     if gui then
         gui.Enabled = isOpen
         if isOpen then
+            print("[EquipmentUI] Opening - playerData: " .. tostring(playerData ~= nil))
+            if playerData then
+                print("[EquipmentUI] equipment: " .. tostring(playerData.equipment ~= nil))
+            end
             self:Update()
         end
     end
