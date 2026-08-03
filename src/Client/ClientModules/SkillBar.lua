@@ -20,10 +20,13 @@ local cooldownTimers = {}  -- skillId = endTime
 
 -- Create skill bar UI
 function SkillBar:Create()
-    mainGui = playerGui:FindFirstChild("ArcadiaHUD")
+    mainGui = playerGui:FindFirstChild("GameHUD")
     if not mainGui then
-        warn("[SkillBar] No ArcadiaHUD found")
-        return
+        -- Create own GUI if HUD not found
+        mainGui = Instance.new("ScreenGui")
+        mainGui.Name = "GameHUD"
+        mainGui.ResetOnSpawn = false
+        mainGui.Parent = playerGui
     end
     
     -- Skill bar frame at bottom center
@@ -230,13 +233,24 @@ function SkillBar:Update(data)
     
     if not skillFrame then return end
     
-    -- Show skill bar only if player has a job
+    -- Always show skill bar
+    skillFrame.Visible = true
+    
+    -- If no job, show empty slots
     if not data.job then
-        skillFrame.Visible = false
+        for i = 1, 4 do
+            local btn = skillButtons[i]
+            if btn then
+                local nameLabel = btn:FindFirstChild("NameLabel")
+                local mpLabel = btn:FindFirstChild("MPCost")
+                if nameLabel then nameLabel.Text = "Pilih Job" end
+                if mpLabel then mpLabel.Text = "" end
+                btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+                btn.BackgroundTransparency = 0.7
+            end
+        end
         return
     end
-    
-    skillFrame.Visible = true
     
     -- Job skill mapping
     local jobSkills = {
