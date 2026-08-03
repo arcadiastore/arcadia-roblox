@@ -352,9 +352,7 @@ local function connectMonster(monster)
         click.MouseClick:Connect(function()
             -- Set as current target for skills and auto-attack
             SkillBar:SetTarget(monster)
-            -- First attack
-            AttackEvent:FireServer(monster)
-            -- Start auto-attack loop
+            -- Start auto-attack (will walk to monster first, then attack)
             SkillBar:StartAutoAttack(AttackEvent)
         end)
     end
