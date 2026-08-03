@@ -133,19 +133,41 @@ Sky Islands (Lv 90-100)
 ### Project Structure
 ```
 src/
-├── Core/           # Core systems (GameManager, DataManager)
-├── Player/         # Player controller, stats, level
-├── Combat/         # Combat system, skills, damage
-├── Quest/          # Quest system, objectives
-├── Inventory/      # Items, equipment
-├── Shop/           # Buy/sell system
-├── UI/             # User interface
-├── World/          # Map, environment, spawners
-├── Monster/        # Monster AI, behavior
-├── NPC/            # NPC system, dialogue
-├── Dialogue/       # Dialogue system
-├── Save/           # Save/Load system
-└── Multiplayer/    # Party, guild, trading
+├── Data/                          # SEMUA game data (GameData.lua entry point)
+│   ├── GameData.lua              # Single source of truth
+│   ├── Monsters.lua              # Monster definitions
+│   ├── Items.lua                 # Items, equipment, potions
+│   ├── Quests.lua                # Quest definitions
+│   ├── NPCs.lua                  # NPC definitions
+│   ├── Shops.lua                 # Shop inventories
+│   ├── Dialogues.lua             # Dialogue trees
+│   ├── Jobs.lua                  # Job class definitions
+│   ├── Skills.lua                # Skill definitions (per job)
+│   └── SpawnPositions.lua        # Monster/NPC spawn locations + checkpoints
+│
+├── Server/                        # Server-side logic
+│   ├── MainServer.lua            # Entry point (loads modules)
+│   └── ServerModules/
+│       ├── PlayerData.lua        # Player data management
+│       ├── CombatSystem.lua      # Combat logic, attack cooldown, skills
+│       ├── QuestSystem.lua       # Quest accept/complete/tracking
+│       ├── ShopSystem.lua        # Buy/sell
+│       ├── DialogueSystem.lua    # NPC dialogue engine
+│       └── WorldBuilder.lua      # Map generation, checkpoints, monster AI
+│
+└── Client/                        # Client-side logic
+    ├── MainClient.lua            # Entry point (loads modules)
+    └── ClientModules/
+        ├── HUD.lua               # Stats display (HP, MP, ATK, etc.)
+        ├── QuestTracker.lua      # Active quest tracker (INFORMATIF!)
+        ├── ShopUI.lua            # Shop interface
+        ├── DialogueUI.lua        # Dialogue window
+        ├── Notification.lua      # Notifications (quest, level up)
+        ├── DamagePopup.lua       # Floating damage numbers
+        ├── AutoPanel.lua         # Auto combat, skill, potion + settings
+        ├── EquipmentUI.lua       # Equipment panel (11 slots)
+        ├── InventoryUI.lua       # Inventory panel (3 tabs)
+        └── SkillBar.lua          # Skill bar (keys 1-4, cooldown, MP cost)
 ```
 
 ---
