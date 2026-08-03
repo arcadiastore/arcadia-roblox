@@ -146,14 +146,37 @@ local function sendResponse(text, npcId)
     end
 end
 
--- Report quest and accept next (server handles everything)
+-- Report quest and accept next via dialogue
 local function doReporting(npcId, questId)
-    local DialogueEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("DialogueEvent")
-    if DialogueEvent then
-        DialogueEvent:FireServer("auto_report", {npcId = npcId})
-    end
-    task.wait(2)  -- Wait for server to process
-    print("[AutoPanel] Auto report sent for: " .. tostring(npcId))
+    -- Step 1: Talk to NPC
+    interactNPC(npcId)
+    task.wait(2)
+    
+    -- Step 2: Take reward
+    sendResponse("Terima kasih! (Ambil Reward)", npcId)
+    task.wait(1.5)
+    
+    -- Step 3: Close dialogue
+    sendResponse("Sama-sama!", npcId)
+    task.wait(1)
+    sendResponse("exit", npcId)
+    task.wait(1.5)
+    
+    -- Step 4: Talk again for new quest
+    interactNPC(npcId)
+    task.wait(2)
+    
+    -- Step 5: Ask for quest
+    sendResponse("Ada tugas untuk saya?", npcId)
+    task.wait(1.5)
+    
+    -- Step 6: Accept quest
+    sendResponse("✓ Saya terima quest ini!", npcId)
+    task.wait(1)
+    sendResponse("exit", npcId)
+    task.wait(1)
+    
+    print("[AutoPanel] Reporting done for quest: " .. tostring(questId))
 end
 
 -- Main auto quest loop
