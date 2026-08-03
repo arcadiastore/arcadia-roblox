@@ -162,11 +162,13 @@ function SkillBar:UseSkill(slotIndex)
     
     -- Check if learned
     if not currentData.learnedSkills[skillId] then
+        SkillBar:ShowNotLearned(slotIndex)
         return
     end
     
     -- Check cooldown
     if cooldownTimers[skillId] and tick() < cooldownTimers[skillId] then
+        SkillBar:ShowOnCooldown(slotIndex)
         return
     end
     
@@ -174,8 +176,15 @@ function SkillBar:UseSkill(slotIndex)
     local skillData = GameData.Skills and GameData.Skills[skillId]
     if not skillData then return end
     if (currentData.mp or 0) < skillData.mpCost then
+        SkillBar:ShowNoMP(slotIndex)
         return
     end
+    
+    -- VISUAL: Button flash animation
+    SkillBar:FlashButton(slotIndex)
+    
+    -- VISUAL: Skill name popup on screen
+    SkillBar:ShowSkillPopup(skillData.name, skillData.type)
     
     -- Fire skill event
     local SkillEvent = game.ReplicatedStorage:FindFirstChild("SkillEvent")
@@ -356,6 +365,122 @@ function SkillBar:HandleInput(input)
         end
         
         self:UseSkill(slot)
+    end
+end
+
+-- ============================================
+-- VISUAL EFFECTS
+-- ============================================
+
+-- Flash button when skill is used
+function SkillBar:FlashButton(slotIndex)
+    local btn = skillButtons[slotIndex]
+    if not btn then return end
+    
+    local TweenService = game:GetService("TweenService")
+    local originalColor = btn.BackgroundColor3
+    
+    -- Flash white
+    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    local tween = TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = originalColor})
+    tween:Play()
+end
+
+-- Show skill name popup on screen
+function SkillBar:ShowSkillPopup(skillName, skillType)
+    if not mainGui then return end
+    
+    local TweenService = game:GetService("TweenService")
+    
+    -- Color based on skill type
+    local color = Color3.fromRGB(255, 200, 50)  -- Default gold
+    if skillType == "physical" then
+        color = Color3.fromRGB(255, 100, 50)  -- Orange
+    elseif skillType == "magic" then
+        color = Color3.fromRGB(100, 150, 255)  -- Blue
+    elseif skillType == "heal" then
+        color = Color3.fromRGB(50, 255, 100)  -- Green
+    elseif skillType == "buff" then
+        color = Color3.fromRGB(200, 100, 255)  -- Purple
+    end
+    
+    -- Create popup
+    local popup = Instance.new("TextLabel")
+    popup.Name = "SkillPopup"
+    popup.Size = UDim2.new(0, 200, 0, 40)
+    popup.Position = UDim2.new(0.5, -100, 0.5, -80)
+    popup.BackgroundTransparency = 1
+    popup.Text = skillName .. "!"
+    popup.TextColor3 = color
+    popup.TextSize = 28
+    popup.Font = Enum.Font.SourceSansBold
+    popup.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    popup.TextStrokeTransparency = 0.3
+    popup.ZIndex = 100
+    popup.Parent = mainGui
+    
+    -- Animate: fade out and move up
+    local tweenUp = TweenService:Create(popup, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -100, 0.5, -130),
+        TextTransparency = 1,
+        TextStrokeTransparency = 1,
+    })
+    tweenUp:Play()
+    tweenUp.Completed:Connect(function()
+        popup:Destroy()
+    end)
+end
+
+-- Show "not learned" feedback
+function SkillBar:ShowNotLearned(slotIndex)
+    local btn = skillButtons[slotIndex]
+    if not btn then return end
+    
+    local TweenService = game:GetService("TweenService")
+    
+    -- Flash red
+    btn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    local tween = TweenService:Create(btn, TweenInfo.new(0.5), {BackgroundColor3 = Color3.fromRGB(40, 40, 50)})
+    tween:Play()
+end
+
+-- Show "on cooldown" feedback
+function SkillBar:ShowOnCooldown(slotIndex)
+    local btn = skillButtons[slotIndex]
+    if not btn then return end
+    
+    local TweenService = game:GetService("TweenService")
+    
+    -- Flash yellow
+    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 50)
+    local tween = TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(60, 60, 90)})
+    tween:Play()
+end
+
+-- Show "no MP" feedback
+function SkillBar:ShowNoMP(slotIndex)
+    local btn = skillButtons[slotIndex]
+    if not btn then return end
+    
+    local TweenService = game:GetService("TweenService")
+    
+    -- Flash blue
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 255)
+    local tween = TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(80, 40, 40)})
+    tween:Play()
+    
+    -- Show "No MP" text briefly
+    local nameLabel = btn:FindFirstChild("NameLabel")
+    if nameLabel then
+        local original = nameLabel.Text
+        nameLabel.Text = "No MP!"
+        nameLabel.TextColor3 = Color3.fromRGB(100, 150, 255)
+        task.delay(1, function()
+            if nameLabel then
+                nameLabel.Text = original
+                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end)
     end
 end
 
