@@ -131,7 +131,7 @@ Items["wooden_sword"] = {
     price = 100,
     sellPrice = 50,
     levelReq = 1,
-    jobReq = nil,
+    jobReq = {"Warrior"},
     stats = {atk = 5},
     range = 8,  -- melee
 }
@@ -145,7 +145,7 @@ Items["iron_sword"] = {
     price = 300,
     sellPrice = 150,
     levelReq = 5,
-    jobReq = nil,
+    jobReq = {"Warrior"},
     stats = {atk = 12},
     range = 8,  -- melee
 }
