@@ -453,17 +453,28 @@ function SkillBar:UseSkill(slotIndex)
     print("[SkillBar] All checks passed, firing skill...")
     
     -- VISUAL: Button flash animation
-    SkillBar:FlashButton(slotIndex)
+    print("[SkillBar] Flashing button...")
+    local flashOk, flashErr = pcall(function() SkillBar:FlashButton(slotIndex) end)
+    if not flashOk then warn("[SkillBar] Flash error: " .. tostring(flashErr)) end
     
     -- VISUAL: Skill name popup on screen
-    SkillBar:ShowSkillPopup(skillData.name, skillData.type)
+    print("[SkillBar] Showing popup...")
+    local popupOk, popupErr = pcall(function() SkillBar:ShowSkillPopup(skillData.name, skillData.type) end)
+    if not popupOk then warn("[SkillBar] Popup error: " .. tostring(popupErr)) end
     
     -- Fire skill event
+    print("[SkillBar] Finding SkillEvent...")
     local SkillEvent = game.ReplicatedStorage:FindFirstChild("SkillEvent")
-    if not SkillEvent then return end
+    print("[SkillBar] SkillEvent: " .. tostring(SkillEvent))
+    if not SkillEvent then 
+        warn("[SkillBar] SkillEvent not found!")
+        return 
+    end
     
     -- Get target monster (closest or current target)
+    print("[SkillBar] Getting target monster...")
     local monsterPart = SkillBar:GetTargetMonster()
+    print("[SkillBar] monsterPart: " .. tostring(monsterPart))
     
     -- For buffs and heals, monster target not needed
     if skillData.type == "buff" or skillData.type == "heal" then
@@ -471,6 +482,7 @@ function SkillBar:UseSkill(slotIndex)
         SkillEvent:FireServer({skillId = skillId, monsterPart = nil})
     else
         local target = monsterPart or self:GetTargetMonster()
+        print("[SkillBar] final target: " .. tostring(target))
         if not target then
             warn("[SkillBar] No target for damage skill!")
             return
