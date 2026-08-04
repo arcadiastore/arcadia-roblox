@@ -143,13 +143,14 @@ Items["wooden_sword"] = {
     stats = {atk = 5},
     range = 8,
     visual = {
-        color = Color3.fromRGB(139, 90, 43),  -- coklat kayu
-        size = Vector3.new(0.3, 2.5, 0.3),
-        shape = "Block",
-        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-30)),
+        meshId = "rbxassetid://10176805591",
+        size = Vector3.new(1, 1, 3),  -- sesuaikan setelah test
+        color = Color3.fromRGB(255, 255, 255),
+        material = Enum.Material.SmoothPlastic,
+        offset = CFrame.new(1.5, 0, 0) * CFrame.Angles(math.rad(90), 0, math.rad(-30)),
         attachTo = "Right Arm",
     },
-    icon = "rbxassetid://0",
+    icon = "rbxassetid://10176805591",
 }
 
 Items["iron_sword"] = {
