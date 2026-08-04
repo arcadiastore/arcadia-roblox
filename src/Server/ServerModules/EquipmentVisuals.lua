@@ -3,6 +3,7 @@
     Shows equipped items on player character
     
     Attach visual parts to character body based on equipment data.
+    Supports R6 body part names.
 ]]
 
 local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
@@ -11,6 +12,35 @@ local EquipmentVisuals = {}
 
 -- Tag name for cleanup
 local TAG = "EquipVisual"
+
+-- R6 Body part names
+local R6_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
+
+-- Wait for all R6 body parts to load
+local function waitForBodyParts(character, timeout)
+    timeout = timeout or 5
+    local startTime = tick()
+    
+    for _, partName in ipairs(R6_PARTS) do
+        local part = character:FindFirstChild(partName)
+        while not part and (tick() - startTime) < timeout do
+            task.wait(0.1)
+            part = character:FindFirstChild(partName)
+        end
+        if not part then
+            warn("[EquipVisual] Timeout waiting for: " .. partName)
+            return false
+        end
+    end
+    
+    return true
+end
+
+-- Check if character is R6
+local function isR6(character)
+    return character:FindFirstChild("Torso") ~= nil 
+       and character:FindFirstChild("Right Arm") ~= nil
+end
 
 -- Remove all visual parts from character
 function EquipmentVisuals:ClearVisuals(character)
@@ -61,8 +91,34 @@ local function createVisualPart(character, bodyPartName, visualData, itemData)
     return part
 end
 
+-- Force character to R6 by respawning if needed
+function EquipmentVisuals:EnsureR6(player)
+    local character = player.Character
+    if not character then return end
+    
+    -- If already R6, no need to do anything
+    if isR6(character) then
+        return true
+    end
+    
+    -- Character is R15, need to respawn as R6
+    print("[EquipVisual] Character is R15, forcing R6 respawn...")
+    
+    -- Store current position
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local savedPos = rootPart and rootPart.Position or Vector3.new(0, 5, 0)
+    
+    -- Destroy current character
+    character:BreakJoints()
+    
+    -- Wait for character to be removed
+    task.wait(0.5)
+    
+    -- The CharacterAdded event will handle the rest
+    return false
+end
+
 -- Apply equipment visuals to character
--- playerData should have .equipment table
 function EquipmentVisuals:ApplyVisuals(character, playerData)
     if not character then 
         warn("[EquipVisual] No character!")
@@ -71,6 +127,18 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
     if not playerData then
         warn("[EquipVisual] No playerData!")
         return
+    end
+    
+    -- Check if R6
+    if not isR6(character) then
+        warn("[EquipVisual] Character is not R6! Body parts may be missing.")
+        warn("[EquipVisual] Waiting for R6 parts...")
+        
+        -- Wait a bit more for parts
+        if not waitForBodyParts(character, 3) then
+            warn("[EquipVisual] Failed to get R6 parts. Aborting visuals.")
+            return
+        end
     end
     
     -- Clear old visuals
@@ -96,7 +164,7 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                     
                     -- Special: fullBody costume
                     if v.fullBody then
-                        for _, partName in ipairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+                        for _, partName in ipairs(R6_PARTS) do
                             local part = character:FindFirstChild(partName)
                             if part then
                                 part.Color = v.color
@@ -130,7 +198,7 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                         orbWeld.Parent = orb
                         
                         orb.Parent = character
-                        print("[EquipVisual] Added orb to staff")
+                        print("[EquipVisual] Added orb")
                     end
                     
                     -- Blade on axe
