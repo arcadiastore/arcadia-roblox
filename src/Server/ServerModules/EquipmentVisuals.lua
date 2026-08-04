@@ -89,6 +89,10 @@ local function createEquipPart(character, bodyPartName, visualData, itemData)
         if visualData.textureId and visualData.textureId ~= "" then
             part.TextureID = visualData.textureId
         end
+        -- Scale mesh if needed (default 1)
+        if visualData.scale then
+            part.Size = part.Size * visualData.scale
+        end
     else
         -- Fallback to basic Part
         part = Instance.new("Part")
@@ -97,10 +101,11 @@ local function createEquipPart(character, bodyPartName, visualData, itemData)
         elseif visualData.shape == "Cylinder" then
             part.Shape = Enum.PartType.Cylinder
         end
+        -- Size only for basic Part
+        part.Size = visualData.size or Vector3.new(1, 1, 1)
     end
     
     part.Name = "Equip_" .. (itemData.id or "unknown")
-    part.Size = visualData.size or Vector3.new(1, 1, 1)
     part.Color = visualData.color or Color3.fromRGB(255, 255, 255)
     part.Material = visualData.material or Enum.Material.SmoothPlastic
     part.CanCollide = false
