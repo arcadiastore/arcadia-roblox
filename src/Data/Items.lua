@@ -143,8 +143,8 @@ Items["wooden_sword"] = {
     stats = {atk = 5},
     range = 8,
     visual = {
-        meshId = "rbxassetid://136149295735575",
-        scale = 1,  -- multiplier ukuran mesh, sesuaikan jika perlu
+        template = "wooden_sword",  -- Nama MeshPart di ServerStorage/EquipTemplates
+        scale = 1,
         color = Color3.fromRGB(255, 255, 255),
         material = Enum.Material.SmoothPlastic,
         offset = CFrame.new(1.5, 0, 0) * CFrame.Angles(math.rad(90), 0, math.rad(-30)),

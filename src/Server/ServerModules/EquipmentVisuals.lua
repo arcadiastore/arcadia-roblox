@@ -12,6 +12,22 @@ local EquipmentVisuals = {}
 
 local TAG = "EquipVisual"
 
+-- Template storage (letakkan MeshPart templates di ServerStorage)
+local Templates = game.ServerStorage:FindFirstChild("EquipTemplates")
+
+-- Load templates into memory on script start
+local TemplateCache = {}
+local function loadTemplates()
+    if not Templates then return end
+    for _, child in ipairs(Templates:GetChildren()) do
+        if child:IsA("MeshPart") or child:IsA("Part") then
+            TemplateCache[child.Name] = child
+            print("[EquipVisual] Template loaded: " .. child.Name)
+        end
+    end
+end
+loadTemplates()
+
 -- R6 body parts
 local R6_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 
@@ -80,38 +96,41 @@ local function createEquipPart(character, bodyPartName, visualData, itemData)
     end
     
     local part
-    local hasMesh = visualData.meshId and visualData.meshId ~= ""
+    local itemId = itemData.id or "unknown"
+    local templateName = visualData.template  -- Nama template di ServerStorage
     
-    if hasMesh then
-        -- Use MeshPart for proper 3D model
-        part = Instance.new("MeshPart")
-        part.MeshId = visualData.meshId
-        if visualData.textureId and visualData.textureId ~= "" then
-            part.TextureID = visualData.textureId
-        end
-        -- Scale mesh if needed (default 1)
-        if visualData.scale then
-            part.Size = part.Size * visualData.scale
-        end
+    -- PRIORITAS: Clone dari template (paling reliable)
+    if templateName and TemplateCache[templateName] then
+        part = TemplateCache[templateName]:Clone()
+        print("[EquipVisual] Cloned template: " .. templateName)
+    elseif TemplateCache[itemId] then
+        -- Coba pakai nama item sebagai template name
+        part = TemplateCache[itemId]:Clone()
+        print("[EquipVisual] Cloned template by item ID: " .. itemId)
     else
-        -- Fallback to basic Part
+        -- Fallback: basic Part (tanpa mesh)
         part = Instance.new("Part")
         if visualData.shape == "Ball" then
             part.Shape = Enum.PartType.Ball
         elseif visualData.shape == "Cylinder" then
             part.Shape = Enum.PartType.Cylinder
         end
-        -- Size only for basic Part
         part.Size = visualData.size or Vector3.new(1, 1, 1)
+        warn("[EquipVisual] No template found for " .. itemId .. ", using basic Part")
     end
     
-    part.Name = "Equip_" .. (itemData.id or "unknown")
+    part.Name = "Equip_" .. itemId
     part.Color = visualData.color or Color3.fromRGB(255, 255, 255)
     part.Material = visualData.material or Enum.Material.SmoothPlastic
     part.CanCollide = false
     part.Anchored = false
     part.Massless = true
     part:SetAttribute(TAG, true)
+    
+    -- Scale if needed
+    if visualData.scale then
+        part.Size = part.Size * visualData.scale
+    end
     
     -- Attach to body part
     local offset = visualData.offset or CFrame.new()
