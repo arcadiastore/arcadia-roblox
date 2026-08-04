@@ -106,6 +106,14 @@ Players.PlayerAdded:Connect(function(player)
                 end
             end)
         end
+        
+        -- Apply equipment visuals after character loads
+        task.wait(0.5)
+        local visuals = require(ServerModules:WaitForChild("EquipmentVisuals"))
+        local pData = PlayerData:Get(player)
+        if pData and character.Parent then
+            visuals:ApplyVisuals(character, pData)
+        end
     end)
     
     -- Load initial character (AFTER connecting CharacterAdded)

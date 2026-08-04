@@ -32,6 +32,7 @@ Items["hp_potion_small"] = {
     stackable = true,
     maxStack = 99,
     effect = {stat = "hp", value = 50},
+    icon = "rbxassetid://0", -- placeholder
 }
 
 Items["hp_potion_medium"] = {
@@ -44,6 +45,7 @@ Items["hp_potion_medium"] = {
     stackable = true,
     maxStack = 99,
     effect = {stat = "hp", value = 100},
+    icon = "rbxassetid://0",
 }
 
 Items["mp_potion_small"] = {
@@ -56,6 +58,7 @@ Items["mp_potion_small"] = {
     stackable = true,
     maxStack = 99,
     effect = {stat = "mp", value = 30},
+    icon = "rbxassetid://0",
 }
 
 Items["mp_potion_medium"] = {
@@ -68,6 +71,7 @@ Items["mp_potion_medium"] = {
     stackable = true,
     maxStack = 99,
     effect = {stat = "mp", value = 60},
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -82,6 +86,7 @@ Items["slime_gel"] = {
     sellPrice = 5,
     stackable = true,
     maxStack = 99,
+    icon = "rbxassetid://0",
 }
 
 Items["wolf_fang"] = {
@@ -92,6 +97,7 @@ Items["wolf_fang"] = {
     sellPrice = 15,
     stackable = true,
     maxStack = 99,
+    icon = "rbxassetid://0",
 }
 
 Items["boar_tusk"] = {
@@ -102,6 +108,7 @@ Items["boar_tusk"] = {
     sellPrice = 25,
     stackable = true,
     maxStack = 99,
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -116,6 +123,7 @@ Items["job_change_ticket"] = {
     sellPrice = 2500,
     stackable = true,
     maxStack = 5,
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -133,7 +141,15 @@ Items["wooden_sword"] = {
     levelReq = 1,
     jobReq = {"Warrior"},
     stats = {atk = 5},
-    range = 8,  -- melee
+    range = 8,
+    visual = {
+        color = Color3.fromRGB(139, 90, 43),  -- coklat kayu
+        size = Vector3.new(0.3, 2.5, 0.3),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-30)),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_sword"] = {
@@ -147,7 +163,15 @@ Items["iron_sword"] = {
     levelReq = 5,
     jobReq = {"Warrior"},
     stats = {atk = 12},
-    range = 8,  -- melee
+    range = 8,
+    visual = {
+        color = Color3.fromRGB(180, 180, 180),  -- abu besi
+        size = Vector3.new(0.3, 3, 0.3),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-30)),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["steel_sword"] = {
@@ -161,7 +185,15 @@ Items["steel_sword"] = {
     levelReq = 10,
     jobReq = {"Warrior", "Archer"},
     stats = {atk = 25, spd = 2},
-    range = 8,  -- melee
+    range = 8,
+    visual = {
+        color = Color3.fromRGB(200, 210, 220),  -- baja terang
+        size = Vector3.new(0.3, 3.5, 0.3),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-30)),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["hunting_dagger"] = {
@@ -175,7 +207,15 @@ Items["hunting_dagger"] = {
     levelReq = 3,
     jobReq = {"Archer"},
     stats = {atk = 8, spd = 3},
-    range = 6,  -- melee (short)
+    range = 6,
+    visual = {
+        color = Color3.fromRGB(160, 160, 170),  -- abu keperakan
+        size = Vector3.new(0.2, 1.5, 0.2),
+        shape = "Block",
+        offset = CFrame.new(1, 0.3, 0) * CFrame.Angles(0, 0, math.rad(-45)),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -193,7 +233,20 @@ Items["wooden_staff"] = {
     levelReq = 1,
     jobReq = {"Mage"},
     stats = {matk = 8, mp = 10},
-    range = 25,  -- ranged (magic)
+    range = 25,
+    visual = {
+        color = Color3.fromRGB(139, 90, 43),  -- coklat kayu
+        size = Vector3.new(0.3, 4, 0.3),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-15)),
+        attachTo = "Right Arm",
+        orb = {  -- bola di ujung staff
+            color = Color3.fromRGB(80, 150, 255),  -- biru magic
+            size = Vector3.new(0.6, 0.6, 0.6),
+            offset = CFrame.new(0, 2, 0),
+        },
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_staff"] = {
@@ -207,7 +260,20 @@ Items["iron_staff"] = {
     levelReq = 5,
     jobReq = {"Mage"},
     stats = {matk = 18, mp = 25},
-    range = 25,  -- ranged (magic)
+    range = 25,
+    visual = {
+        color = Color3.fromRGB(100, 100, 110),  -- besi gelap
+        size = Vector3.new(0.3, 4.5, 0.3),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(-15)),
+        attachTo = "Right Arm",
+        orb = {
+            color = Color3.fromRGB(150, 50, 255),  -- ungu magic
+            size = Vector3.new(0.7, 0.7, 0.7),
+            offset = CFrame.new(0, 2.2, 0),
+        },
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["great_axe"] = {
@@ -221,7 +287,20 @@ Items["great_axe"] = {
     levelReq = 7,
     jobReq = {"Warrior"},
     stats = {atk = 30, def = -3},
-    range = 10,  -- melee (heavy)
+    range = 10,
+    visual = {
+        color = Color3.fromRGB(120, 120, 120),  -- abu gelap
+        size = Vector3.new(0.4, 3.5, 0.4),
+        shape = "Block",
+        offset = CFrame.new(1.3, 0, 0) * CFrame.Angles(0, 0, math.rad(-20)),
+        attachTo = "Right Arm",
+        blade = {  -- mata kapak
+            color = Color3.fromRGB(200, 200, 210),
+            size = Vector3.new(1.2, 1.5, 0.2),
+            offset = CFrame.new(0, 1.5, 0),
+        },
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["longbow"] = {
@@ -235,7 +314,15 @@ Items["longbow"] = {
     levelReq = 5,
     jobReq = {"Archer"},
     stats = {atk = 15, spd = 5},
-    range = 30,  -- ranged (bow)
+    range = 30,
+    visual = {
+        color = Color3.fromRGB(139, 90, 43),  -- coklat kayu
+        size = Vector3.new(0.2, 3, 0.2),
+        shape = "Block",
+        offset = CFrame.new(1.2, 0, 0) * CFrame.Angles(0, 0, math.rad(10)),
+        attachTo = "Left Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -252,6 +339,14 @@ Items["leather_cap"] = {
     sellPrice = 40,
     levelReq = 1,
     stats = {def = 2},
+    visual = {
+        color = Color3.fromRGB(139, 90, 43),  -- coklat kulit
+        size = Vector3.new(2.2, 0.8, 2.2),
+        shape = "Block",
+        offset = CFrame.new(0, 1.2, 0),
+        attachTo = "Head",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_helmet"] = {
@@ -264,6 +359,14 @@ Items["iron_helmet"] = {
     sellPrice = 125,
     levelReq = 5,
     stats = {def = 5, hp = 10},
+    visual = {
+        color = Color3.fromRGB(160, 160, 170),  -- abu besi
+        size = Vector3.new(2.4, 1.2, 2.4),
+        shape = "Block",
+        offset = CFrame.new(0, 0.8, 0),
+        attachTo = "Head",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["mage_hat"] = {
@@ -276,6 +379,19 @@ Items["mage_hat"] = {
     sellPrice = 100,
     levelReq = 3,
     stats = {matk = 3, mdef = 2},
+    visual = {
+        color = Color3.fromRGB(50, 50, 150),  -- biru gelap
+        size = Vector3.new(2, 2, 2),
+        shape = "Block",
+        offset = CFrame.new(0, 1.8, 0),
+        attachTo = "Head",
+        accent = {  -- pita/hiasan
+            color = Color3.fromRGB(200, 180, 50),  -- emas
+            size = Vector3.new(2.2, 0.3, 2.2),
+            offset = CFrame.new(0, -0.5, 0),
+        },
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -292,6 +408,14 @@ Items["leather_armor"] = {
     sellPrice = 75,
     levelReq = 1,
     stats = {def = 5},
+    visual = {
+        color = Color3.fromRGB(120, 75, 30),  -- coklat gelap
+        size = Vector3.new(2.5, 2.5, 1.5),
+        shape = "Block",
+        offset = CFrame.new(0, 0, 0),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_chestplate"] = {
@@ -304,6 +428,14 @@ Items["iron_chestplate"] = {
     sellPrice = 250,
     levelReq = 7,
     stats = {def = 12, hp = 20},
+    visual = {
+        color = Color3.fromRGB(140, 140, 150),  -- abu besi
+        size = Vector3.new(2.6, 2.6, 1.6),
+        shape = "Block",
+        offset = CFrame.new(0, 0, 0),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["cloth_robe"] = {
@@ -316,6 +448,14 @@ Items["cloth_robe"] = {
     sellPrice = 100,
     levelReq = 3,
     stats = {def = 2, matk = 3, mp = 15},
+    visual = {
+        color = Color3.fromRGB(40, 40, 120),  -- biru gelap
+        size = Vector3.new(2.4, 3, 1.4),
+        shape = "Block",
+        offset = CFrame.new(0, -0.3, 0),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -332,6 +472,14 @@ Items["leather_pants"] = {
     sellPrice = 50,
     levelReq = 1,
     stats = {def = 3},
+    visual = {
+        color = Color3.fromRGB(100, 65, 25),  -- coklat kulit
+        size = Vector3.new(2.2, 2, 1.3),
+        shape = "Block",
+        offset = CFrame.new(0, 0, 0),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_leggings"] = {
@@ -344,6 +492,14 @@ Items["iron_leggings"] = {
     sellPrice = 150,
     levelReq = 5,
     stats = {def = 6, spd = -1},
+    visual = {
+        color = Color3.fromRGB(130, 130, 140),  -- abu besi
+        size = Vector3.new(2.3, 2, 1.4),
+        shape = "Block",
+        offset = CFrame.new(0, 0, 0),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -360,6 +516,15 @@ Items["leather_boots"] = {
     sellPrice = 40,
     levelReq = 1,
     stats = {def = 1, spd = 2},
+    visual = {
+        color = Color3.fromRGB(90, 55, 20),  -- coklat gelap
+        size = Vector3.new(1, 0.6, 1.3),
+        shape = "Block",
+        offset = CFrame.new(0, -0.8, 0.2),
+        attachTo = "Left Leg",
+        mirror = true,  -- juga apply ke Right Leg
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["iron_boots"] = {
@@ -372,6 +537,15 @@ Items["iron_boots"] = {
     sellPrice = 100,
     levelReq = 5,
     stats = {def = 4, spd = -1},
+    visual = {
+        color = Color3.fromRGB(130, 130, 140),  -- abu besi
+        size = Vector3.new(1.1, 0.7, 1.4),
+        shape = "Block",
+        offset = CFrame.new(0, -0.8, 0.2),
+        attachTo = "Left Leg",
+        mirror = true,
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -383,11 +557,19 @@ Items["copper_ring"] = {
     name = "Copper Ring",
     description = "Cincin tembaga sederhana",
     type = "equipment",
-    slot = "ring",  -- bisa kiri atau kanan
+    slot = "ring",
     price = 50,
     sellPrice = 25,
     levelReq = 1,
     stats = {atk = 1, def = 1},
+    visual = {
+        color = Color3.fromRGB(180, 120, 50),  -- tembaga
+        size = Vector3.new(0.5, 0.2, 0.5),
+        shape = "Block",
+        offset = CFrame.new(0, -0.8, 0),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["silver_ring"] = {
@@ -400,6 +582,14 @@ Items["silver_ring"] = {
     sellPrice = 100,
     levelReq = 5,
     stats = {atk = 3, def = 2, luk = 2},
+    visual = {
+        color = Color3.fromRGB(200, 200, 210),  -- perak
+        size = Vector3.new(0.5, 0.2, 0.5),
+        shape = "Block",
+        offset = CFrame.new(0, -0.8, 0),
+        attachTo = "Right Arm",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -416,6 +606,14 @@ Items["wooden_pendant"] = {
     sellPrice = 30,
     levelReq = 1,
     stats = {mdef = 3, hp = 5},
+    visual = {
+        color = Color3.fromRGB(139, 90, 43),  -- coklat kayu
+        size = Vector3.new(0.5, 0.5, 0.3),
+        shape = "Ball",
+        offset = CFrame.new(0, 1.2, -0.8),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["silver_necklace"] = {
@@ -428,6 +626,14 @@ Items["silver_necklace"] = {
     sellPrice = 150,
     levelReq = 5,
     stats = {mdef = 5, hp = 15, mp = 10},
+    visual = {
+        color = Color3.fromRGB(200, 200, 210),  -- perak
+        size = Vector3.new(0.6, 0.6, 0.3),
+        shape = "Ball",
+        offset = CFrame.new(0, 1.2, -0.8),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
@@ -444,6 +650,14 @@ Items["basic_wings"] = {
     sellPrice = 250,
     levelReq = 10,
     stats = {spd = 10},
+    visual = {
+        color = Color3.fromRGB(255, 255, 255),  -- putih
+        size = Vector3.new(4, 3, 0.3),
+        shape = "Block",
+        offset = CFrame.new(0, 0.5, 1.2),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["rope_climbing"] = {
@@ -456,10 +670,18 @@ Items["rope_climbing"] = {
     sellPrice = 100,
     levelReq = 3,
     stats = {spd = 3, def = 1},
+    visual = {
+        color = Color3.fromRGB(180, 150, 100),  -- coklat tali
+        size = Vector3.new(0.5, 2, 0.5),
+        shape = "Block",
+        offset = CFrame.new(0, 0, 1),
+        attachTo = "Torso",
+    },
+    icon = "rbxassetid://0",
 }
 
 -- ============================================
--- EQUIPMENT - COSTUME (Visual only, no stats)
+-- EQUIPMENT - COSTUME (Visual only)
 -- ============================================
 
 Items["costume_ninja"] = {
@@ -471,7 +693,16 @@ Items["costume_ninja"] = {
     price = 1000,
     sellPrice = 500,
     levelReq = 1,
-    stats = {},  -- visual only
+    stats = {},
+    visual = {
+        color = Color3.fromRGB(30, 30, 30),  -- hitam
+        size = Vector3.new(2.6, 3.5, 1.5),
+        shape = "Block",
+        offset = CFrame.new(0, -0.5, 0),
+        attachTo = "Torso",
+        fullBody = true,  -- ganti warna seluruh tubuh
+    },
+    icon = "rbxassetid://0",
 }
 
 Items["costume_knight"] = {
@@ -483,7 +714,16 @@ Items["costume_knight"] = {
     price = 1000,
     sellPrice = 500,
     levelReq = 1,
-    stats = {},  -- visual only
+    stats = {},
+    visual = {
+        color = Color3.fromRGB(180, 170, 140),  -- emas pucat
+        size = Vector3.new(2.6, 3.5, 1.5),
+        shape = "Block",
+        offset = CFrame.new(0, -0.5, 0),
+        attachTo = "Torso",
+        fullBody = true,
+    },
+    icon = "rbxassetid://0",
 }
 
 return Items

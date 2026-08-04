@@ -7,6 +7,18 @@ local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
 
 local PlayerData = {}
 
+-- Equipment visuals (lazy load to avoid circular dependency)
+local EquipmentVisuals = nil
+local function getEquipmentVisuals()
+    if not EquipmentVisuals then
+        local ok, mod = pcall(function()
+            return require(game.ServerScriptService.MainServer.ServerModules.EquipmentVisuals)
+        end)
+        if ok then EquipmentVisuals = mod end
+    end
+    return EquipmentVisuals
+end
+
 -- Player data storage
 local playerDataStore = {}
 
@@ -493,6 +505,12 @@ function PlayerData:EquipItem(player, itemId, targetSlot, events)
     self:UpdateMaxStats(player)
     self:SendUpdate(player, events)
     
+    -- Update visuals on character
+    local visuals = getEquipmentVisuals()
+    if visuals then
+        visuals:OnEquipmentChanged(player)
+    end
+    
     print("[PlayerData] " .. player.Name .. " equipped " .. itemId .. " to " .. equipSlot)
     return true, "Berhasil equip " .. itemData.name .. "!"
 end
@@ -512,6 +530,12 @@ function PlayerData:UnequipItem(player, slot, events)
     -- Recalculate stats
     self:UpdateMaxStats(player)
     self:SendUpdate(player, events)
+    
+    -- Update visuals on character
+    local visuals = getEquipmentVisuals()
+    if visuals then
+        visuals:OnEquipmentChanged(player)
+    end
     
     print("[PlayerData] " .. player.Name .. " unequipped " .. itemId .. " from " .. slot)
     return true, "Berhasil unequip!"

@@ -242,6 +242,23 @@ function EquipmentUI:Update(data)
             if unequipBtn then
                 unequipBtn.Visible = true
             end
+            -- Show item color indicator
+            local colorDot = btn:FindFirstChild("ColorDot")
+            if not colorDot then
+                colorDot = Instance.new("Frame")
+                colorDot.Name = "ColorDot"
+                colorDot.Size = UDim2.new(0, 16, 0, 16)
+                colorDot.Position = UDim2.new(0, 4, 0, 4)
+                colorDot.BorderSizePixel = 0
+                colorDot.Parent = btn
+                Instance.new("UICorner", colorDot).CornerRadius = UDim.new(0, 8)
+            end
+            if itemData.visual and itemData.visual.color then
+                colorDot.BackgroundColor3 = itemData.visual.color
+                colorDot.Visible = true
+            else
+                colorDot.Visible = false
+            end
             btn.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
         else
             if itemLabel then
@@ -253,6 +270,11 @@ function EquipmentUI:Update(data)
             end
             if unequipBtn then
                 unequipBtn.Visible = false
+            end
+            -- Hide color dot when empty
+            local colorDot = btn:FindFirstChild("ColorDot")
+            if colorDot then
+                colorDot.Visible = false
             end
             btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
         end
