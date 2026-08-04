@@ -14,7 +14,7 @@
 ## Core Features
 
 ### 1. Character System
-- **7 Job Classes** dengan stats dan skill unik
+- **3 Job Classes** (Warrior, Mage, Archer) dengan stats dan skill unik
 - **Level System** (Lv.1 - Lv.100)
 - **Stat System** (STR, AGI, INT, VIT, DEX, LUK)
 - **Equipment System** (11 slots)

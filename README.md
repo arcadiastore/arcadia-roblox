@@ -88,18 +88,14 @@ end
 - **Combat System**: Real-time action combat
 - **Quest System**: Main story + side quests
 - **Multiplayer**: Party, trading, guild
-- **Job System**: 7 job classes dengan skill unik
+- **Job System**: 3 job classes dengan stats dan skill unik
 
 ### Job Classes
 | Job | Role | Specialty |
 |-----|------|-----------|
-| **Warrior** | DPS/Off-Tank | Melee damage, lifesteal |
-| **Knight** | Tank | Defense, HP, invulnerability |
-| **Mage** | DPS (Magic) | AoE spells, MP management |
-| **Archer** | DPS (Ranged) | Critical hits, evasion |
-| **Cleric** | Healer/Support | Healing, party buffs |
-| **Jester** | DPS/Utility | Speed, crit, stealth |
-| **Craftsman** | DPS/Crafter | Crit, crafting, gathering |
+| **Warrior** | Tank/Melee DPS | HP tinggi, DEF tinggi |
+| **Mage** | Ranged Magic DPS | MATK tinggi, AoE |
+| **Archer** | Ranged Physical DPS | SPD tinggi, range jauh |
 
 ### World Map
 ```

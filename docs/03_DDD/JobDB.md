@@ -1,8 +1,10 @@
 # Database Job (Job DB)
 
+> **Status**: Sesuai implementasi (3 job)
+
 ## Ringkasan
 
-Struktur data untuk semua job di Arcadia Online.
+Struktur data untuk 3 job di Arcadia Online.
 
 ## Tabel Utama
 
@@ -11,93 +13,102 @@ Struktur data untuk semua job di Arcadia Online.
 |-------|------|-------------|
 | id | string | ID unik job |
 | name | string | Nama job |
-| tier | int | Tier job (1-3) |
-| parent_job | string | ID job parent (null untuk tier 1) |
 | description | string | Deskripsi job |
 | role | string | Peran (Tank, DPS, Support) |
-| weapon_types | string | Tipe senjata yang bisa digunakan |
+| weapon_types | string | Tipe senjata |
 | armor_type | string | Tipe armor |
 
 ### job_stats
 | Field | Type | Description |
 |-------|------|-------------|
 | job_id | string | FK ke job_base |
-| stat_type | string | Jenis stat |
-| base_value | float | Nilai dasar di Lv 1 |
+| stat_type | string | Jenis stat (hp, mp, atk, def, matk, mdef, spd, luk) |
+| base_modifier | float | Modifier ke base stats player |
 | growth_per_level | float | Pertumbuhan per level |
 
-### job_advancement
-| Field | Type | Description |
-|-------|------|-------------|
-| job_id | string | FK ke job_base |
-| level_req | int | Level yang diperlukan |
-| quest_id | string | ID quest advancement |
-| gold_cost | int | Biaya gold |
+---
 
-## Semua Job
+## Semua Job (3)
 
-### Tier 1 (Lv 1)
-| ID | Nama | Role | Weapon |
-|----|------|------|--------|
-| warrior | Warrior | Tank/Melee DPS | Sword, Axe, Hammer |
-| mage | Mage | Ranged Magic DPS | Staff, Wand, Orb |
-| archer | Archer | Ranged Physical DPS | Bow, Crossbow, Dagger |
+| ID | Nama | Role | Weapon | Armor |
+|----|------|------|--------|-------|
+| warrior | Warrior | Tank/Melee DPS | Sword, Axe, Hammer | Heavy, Medium |
+| mage | Mage | Ranged Magic DPS | Staff, Wand, Orb | Cloth |
+| archer | Archer | Ranged Physical DPS | Bow, Crossbow, Dagger | Light, Medium |
 
-### Tier 2 (Lv 30)
-| ID | Nama | Parent | Role |
-|----|------|--------|------|
-| knight | Knight | Warrior | Tank |
-| berserker | Berserker | Warrior | Melee DPS |
-| wizard | Wizard | Mage | AoE DPS |
-| cleric | Cleric | Mage | Healer |
-| ranger | Ranger | Archer | Ranged DPS |
-| assassin | Assassin | Archer | Burst DPS |
+---
 
-### Tier 3 (Lv 60)
-| ID | Nama | Parent | Role |
-|----|------|--------|------|
-| paladin | Paladin | Knight | Tank/Support |
-| dark_knight | Dark Knight | Knight | Tank/DPS |
-| warlord | Warlord | Berserker | AoE DPS |
-| reaver | Reaver | Berserker | Lifesteal DPS |
-| archmage | Archmage | Wizard | Ultimate DPS |
-| sorcerer | Sorcerer | Wizard | Debuff DPS |
-| bishop | Bishop | Cleric | Pure Healer |
-| inquisitor | Inquisitor | Cleric | DPS/Healer |
-| sniper | Sniper | Ranger | Long Range DPS |
-| beast_master | Beast Master | Ranger | Pet DPS |
-| shadow | Shadow | Assassin | Stealth DPS |
-| trickster | Trickster | Assassin | Evasion DPS |
+## Job Stat Modifiers
 
-## Job Stat Growth
+> Base player: HP=100, MP=50, ATK=10, DEF=5, MATK=5, MDEF=5, SPD=10, LUK=5
 
-### Warrior → Knight → Paladin
-| Stat | Warrior/Lv | Knight/Lv | Paladin/Lv |
-|------|-----------|----------|-----------|
-| HP | 12 | 18 | 22 |
-| MP | 3 | 5 | 8 |
-| ATK | 1.5 | 2 | 2.5 |
-| DEF | 1.2 | 2 | 2.5 |
-| MATK | 0.5 | 0.8 | 1.5 |
-| SPD | 0.8 | 0.7 | 0.6 |
+### Base Modifier (Level 1)
+| Stat | Warrior | Mage | Archer |
+|------|---------|------|--------|
+| HP | +50 | -20 | +10 |
+| MP | 0 | +50 | +10 |
+| ATK | +5 | 0 | +3 |
+| DEF | +8 | -3 | 0 |
+| MATK | 0 | +10 | 0 |
+| MDEF | +2 | +5 | +2 |
+| SPD | -2 | +3 | +8 |
+| LUK | 0 | +2 | +5 |
 
-### Mage → Wizard → Archmage
-| Stat | Mage/Lv | Wizard/Lv | Archmage/Lv |
-|------|---------|----------|------------|
-| HP | 8 | 10 | 12 |
-| MP | 10 | 15 | 20 |
-| ATK | 0.8 | 1 | 1.2 |
-| DEF | 0.5 | 0.6 | 0.7 |
-| MATK | 1.5 | 2.5 | 3.5 |
-| SPD | 0.7 | 0.8 | 0.9 |
+### Growth per Level
+| Stat | Warrior | Mage | Archer |
+|------|---------|------|--------|
+| HP | +15 | +5 | +8 |
+| MP | +2 | +10 | +5 |
+| ATK | +3 | 0 | +3 |
+| DEF | +3 | +1 | +1 |
+| MATK | 0 | +4 | 0 |
+| MDEF | +1 | +2 | +1 |
+| SPD | 0 | +1 | +2 |
+| LUK | +1 | +1 | +2 |
 
-## Job Advancement Quest
+---
 
-| Job | Quest | Objective |
-|-----|-------|-----------|
-| Knight | "Trial of the Shield" | Defeat Guardian in dungeon |
-| Berserker | "Blood Oath" | Survive arena 10 rounds |
-| Wizard | "Arcane Mastery" | Solve tower puzzles |
-| Cleric | "Divine Light" | Heal 100 NPCs |
-| Ranger | "Eagle Eye" | Hit targets from 50m |
-| Assassin | "Shadow Strike" | Defeat boss undetected |
+## Contoh Data (Lua)
+
+```lua
+Jobs["Warrior"] = {
+    id = "Warrior",
+    name = "Warrior",
+    description = "Petarung jarak dekat dengan HP dan DEF tinggi.",
+    role = "Tank / Melee DPS",
+    stats = {
+        hp = 50, mp = 0, atk = 5, def = 8,
+        matk = 0, mdef = 2, spd = -2, luk = 0,
+    },
+    growth = {
+        hp = 15, mp = 2, atk = 3, def = 3,
+        matk = 0, mdef = 1, spd = 0, luk = 1,
+    },
+    weapons = {"Sword", "Axe", "Hammer"},
+    armor = {"Heavy", "Medium"},
+    color = Color3.fromRGB(220, 50, 50),
+    icon = "[W]",
+}
+```
+
+---
+
+## Job Change
+
+| Field | Value |
+|-------|-------|
+| Lokasi | Job Master NPC |
+| Biaya | 1000 gold |
+| Level | Tetap |
+| Skill Points | Di-reset |
+| Equipment | Tetap |
+
+---
+
+## Relationship
+
+```
+job_base (1) ──→ (N) job_stats
+job_base (1) ──→ (N) skill_base
+job_base (1) ──→ (N) player_data
+```
