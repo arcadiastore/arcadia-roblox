@@ -507,8 +507,8 @@ function PlayerData:EquipItem(player, itemId, targetSlot, events)
     
     -- Update visuals on character
     local visuals = getEquipmentVisuals()
-    if visuals then
-        visuals:OnEquipmentChanged(player)
+    if visuals and player.Character then
+        visuals:ApplyVisuals(player.Character, data)
     end
     
     print("[PlayerData] " .. player.Name .. " equipped " .. itemId .. " to " .. equipSlot)
@@ -533,8 +533,8 @@ function PlayerData:UnequipItem(player, slot, events)
     
     -- Update visuals on character
     local visuals = getEquipmentVisuals()
-    if visuals then
-        visuals:OnEquipmentChanged(player)
+    if visuals and player.Character then
+        visuals:ApplyVisuals(player.Character, data)
     end
     
     print("[PlayerData] " .. player.Name .. " unequipped " .. itemId .. " from " .. slot)

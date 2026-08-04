@@ -14,6 +14,7 @@ local TAG = "EquipVisual"
 
 -- Remove all visual parts from character
 function EquipmentVisuals:ClearVisuals(character)
+    if not character then return end
     for _, child in ipairs(character:GetDescendants()) do
         if child:IsA("BasePart") and child:GetAttribute(TAG) then
             child:Destroy()
@@ -24,7 +25,10 @@ end
 -- Create a visual part attached to a body part
 local function createVisualPart(character, bodyPartName, visualData, itemData)
     local bodyPart = character:FindFirstChild(bodyPartName)
-    if not bodyPart then return nil end
+    if not bodyPart then 
+        warn("[EquipVisual] Body part not found: " .. bodyPartName)
+        return nil 
+    end
     
     local part = Instance.new("Part")
     part.Name = "Equip_" .. (itemData.id or "unknown")
@@ -58,136 +62,148 @@ local function createVisualPart(character, bodyPartName, visualData, itemData)
 end
 
 -- Apply equipment visuals to character
+-- playerData should have .equipment table
 function EquipmentVisuals:ApplyVisuals(character, playerData)
-    if not character then return end
+    if not character then 
+        warn("[EquipVisual] No character!")
+        return 
+    end
+    if not playerData then
+        warn("[EquipVisual] No playerData!")
+        return
+    end
     
     -- Clear old visuals
     self:ClearVisuals(character)
     
     local equipment = playerData.equipment
-    if not equipment then return end
+    if not equipment then
+        warn("[EquipVisual] No equipment table!")
+        return
+    end
+    
+    print("[EquipVisual] Applying visuals for " .. (character.Name or "unknown"))
     
     -- Apply each equipped item
     for slot, itemId in pairs(equipment) do
         if itemId then
             local itemData = GameData:GetItem(itemId)
-            if itemData and itemData.visual then
-                local v = itemData.visual
+            if itemData then
+                print("[EquipVisual] Processing: " .. itemId .. " (slot: " .. slot .. ")")
                 
-                -- Special: fullBody costume
-                if v.fullBody then
-                    -- Color all body parts
-                    for _, partName in ipairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
-                        local part = character:FindFirstChild(partName)
-                        if part then
-                            part.Color = v.color
+                if itemData.visual then
+                    local v = itemData.visual
+                    
+                    -- Special: fullBody costume
+                    if v.fullBody then
+                        for _, partName in ipairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+                            local part = character:FindFirstChild(partName)
+                            if part then
+                                part.Color = v.color
+                            end
                         end
                     end
-                end
-                
-                -- Normal attachment
-                local bodyPartName = v.attachTo or "Torso"
-                local part = createVisualPart(character, bodyPartName, v, itemData)
-                
-                -- Orb on staff
-                if part and v.orb then
-                    local orb = Instance.new("Part")
-                    orb.Name = "Equip_Orb"
-                    orb.Size = v.orb.size or Vector3.new(0.5, 0.5, 0.5)
-                    orb.Color = v.orb.color or Color3.fromRGB(255, 255, 255)
-                    orb.Material = Enum.Material.Neon
-                    orb.Shape = Enum.PartType.Ball
-                    orb.CanCollide = false
-                    orb.Anchored = false
-                    orb.Massless = true
-                    orb:SetAttribute(TAG, true)
                     
-                    local orbOffset = v.orb.offset or CFrame.new(0, 1.5, 0)
-                    orb.CFrame = part.CFrame * orbOffset
+                    -- Normal attachment
+                    local bodyPartName = v.attachTo or "Torso"
+                    local part = createVisualPart(character, bodyPartName, v, itemData)
                     
-                    local orbWeld = Instance.new("WeldConstraint")
-                    orbWeld.Part0 = part
-                    orbWeld.Part1 = orb
-                    orbWeld.Parent = orb
-                    
-                    orb.Parent = character
-                end
-                
-                -- Blade on axe
-                if part and v.blade then
-                    local blade = Instance.new("Part")
-                    blade.Name = "Equip_Blade"
-                    blade.Size = v.blade.size or Vector3.new(1, 1, 0.2)
-                    blade.Color = v.blade.color or Color3.fromRGB(200, 200, 200)
-                    blade.Material = Enum.Material.Metal
-                    blade.CanCollide = false
-                    blade.Anchored = false
-                    blade.Massless = true
-                    blade:SetAttribute(TAG, true)
-                    
-                    local bladeOffset = v.blade.offset or CFrame.new(0, 1, 0)
-                    blade.CFrame = part.CFrame * bladeOffset
-                    
-                    local bladeWeld = Instance.new("WeldConstraint")
-                    bladeWeld.Part0 = part
-                    bladeWeld.Part1 = blade
-                    bladeWeld.Parent = blade
-                    
-                    blade.Parent = character
-                end
-                
-                -- Accent on hat
-                if part and v.accent then
-                    local accent = Instance.new("Part")
-                    accent.Name = "Equip_Accent"
-                    accent.Size = v.accent.size or Vector3.new(0.5, 0.2, 0.5)
-                    accent.Color = v.accent.color or Color3.fromRGB(255, 255, 255)
-                    accent.Material = Enum.Material.SmoothPlastic
-                    accent.CanCollide = false
-                    accent.Anchored = false
-                    accent.Massless = true
-                    accent:SetAttribute(TAG, true)
-                    
-                    local accentOffset = v.accent.offset or CFrame.new()
-                    accent.CFrame = part.CFrame * accentOffset
-                    
-                    local accentWeld = Instance.new("WeldConstraint")
-                    accentWeld.Part0 = part
-                    accentWeld.Part1 = accent
-                    accentWeld.Parent = accent
-                    
-                    accent.Parent = character
-                end
-                
-                -- Mirror (for shoes - apply to both legs)
-                if v.mirror and bodyPartName ~= "Right Leg" then
-                    local mirrorPart = createVisualPart(character, "Right Leg", v, itemData)
-                    -- Flip the offset for right side
-                    if mirrorPart then
-                        local flippedOffset = CFrame.new(
-                            -(v.offset and v.offset.X or 0),
-                            v.offset and v.offset.Y or 0,
-                            v.offset and v.offset.Z or 0
-                        )
-                        mirrorPart.CFrame = character:FindFirstChild("Right Leg").CFrame * flippedOffset
+                    -- Orb on staff
+                    if part and v.orb then
+                        local orb = Instance.new("Part")
+                        orb.Name = "Equip_Orb"
+                        orb.Size = v.orb.size or Vector3.new(0.5, 0.5, 0.5)
+                        orb.Color = v.orb.color or Color3.fromRGB(255, 255, 255)
+                        orb.Material = Enum.Material.Neon
+                        orb.Shape = Enum.PartType.Ball
+                        orb.CanCollide = false
+                        orb.Anchored = false
+                        orb.Massless = true
+                        orb:SetAttribute(TAG, true)
+                        
+                        local orbOffset = v.orb.offset or CFrame.new(0, 1.5, 0)
+                        orb.CFrame = part.CFrame * orbOffset
+                        
+                        local orbWeld = Instance.new("WeldConstraint")
+                        orbWeld.Part0 = part
+                        orbWeld.Part1 = orb
+                        orbWeld.Parent = orb
+                        
+                        orb.Parent = character
+                        print("[EquipVisual] Added orb to staff")
                     end
+                    
+                    -- Blade on axe
+                    if part and v.blade then
+                        local blade = Instance.new("Part")
+                        blade.Name = "Equip_Blade"
+                        blade.Size = v.blade.size or Vector3.new(1, 1, 0.2)
+                        blade.Color = v.blade.color or Color3.fromRGB(200, 200, 200)
+                        blade.Material = Enum.Material.Metal
+                        blade.CanCollide = false
+                        blade.Anchored = false
+                        blade.Massless = true
+                        blade:SetAttribute(TAG, true)
+                        
+                        local bladeOffset = v.blade.offset or CFrame.new(0, 1, 0)
+                        blade.CFrame = part.CFrame * bladeOffset
+                        
+                        local bladeWeld = Instance.new("WeldConstraint")
+                        bladeWeld.Part0 = part
+                        bladeWeld.Part1 = blade
+                        bladeWeld.Parent = blade
+                        
+                        blade.Parent = character
+                    end
+                    
+                    -- Accent on hat
+                    if part and v.accent then
+                        local accent = Instance.new("Part")
+                        accent.Name = "Equip_Accent"
+                        accent.Size = v.accent.size or Vector3.new(0.5, 0.2, 0.5)
+                        accent.Color = v.accent.color or Color3.fromRGB(255, 255, 255)
+                        accent.Material = Enum.Material.SmoothPlastic
+                        accent.CanCollide = false
+                        accent.Anchored = false
+                        accent.Massless = true
+                        accent:SetAttribute(TAG, true)
+                        
+                        local accentOffset = v.accent.offset or CFrame.new()
+                        accent.CFrame = part.CFrame * accentOffset
+                        
+                        local accentWeld = Instance.new("WeldConstraint")
+                        accentWeld.Part0 = part
+                        accentWeld.Part1 = accent
+                        accentWeld.Parent = accent
+                        
+                        accent.Parent = character
+                    end
+                    
+                    -- Mirror (for shoes - apply to both legs)
+                    if v.mirror and bodyPartName ~= "Right Leg" then
+                        local rightLeg = character:FindFirstChild("Right Leg")
+                        if rightLeg then
+                            local mirrorPart = createVisualPart(character, "Right Leg", v, itemData)
+                            if mirrorPart then
+                                local flippedOffset = CFrame.new(
+                                    -(v.offset and v.offset.X or 0),
+                                    v.offset and v.offset.Y or 0,
+                                    v.offset and v.offset.Z or 0
+                                )
+                                mirrorPart.CFrame = rightLeg.CFrame * flippedOffset
+                            end
+                        end
+                    end
+                    
+                    print("[EquipVisual] Applied visual for " .. itemId)
+                else
+                    print("[EquipVisual] No visual data for " .. itemId)
                 end
+            else
+                warn("[EquipVisual] Item not found in GameData: " .. tostring(itemId))
             end
         end
     end
-end
-
--- Handle equip/unequip - call this from PlayerData when equipment changes
-function EquipmentVisuals:OnEquipmentChanged(player)
-    local character = player.Character
-    if not character then return end
-    
-    -- Get player data
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
-    local data = PlayerData:Get(player)
-    if not data then return end
-    
-    self:ApplyVisuals(character, data)
 end
 
 return EquipmentVisuals
