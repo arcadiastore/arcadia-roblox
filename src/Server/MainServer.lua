@@ -14,32 +14,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Disable auto-respawn (handle manually)
 Players.CharacterAutoLoads = false
 
--- R6 body part names to wait for
-local R6_BODY_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
-
--- Wait for character to have R6 body parts
-local function waitForR6Parts(character, timeout)
-    timeout = timeout or 8
-    local start = tick()
-    
-    -- First wait for Humanoid
-    local humanoid = character:WaitForChild("Humanoid", timeout)
-    if not humanoid then return false end
-    
-    -- Then wait for all R6 body parts
-    for _, partName in ipairs(R6_BODY_PARTS) do
-        while not character:FindFirstChild(partName) and (tick() - start) < timeout do
-            task.wait(0.1)
-        end
-        if not character:FindFirstChild(partName) then
-            warn("[Server] R6 part not found: " .. partName .. " (character may be R15)")
-            return false
-        end
-    end
-    
-    return true
-end
-
 print("[Server] ==========================================")
 print("[Server] Arcadia Online Server Starting...")
 print("[Server] ==========================================")
@@ -118,10 +92,8 @@ Players.PlayerAdded:Connect(function(player)
     
     -- Track when character dies (connect FIRST)
     player.CharacterAdded:Connect(function(character)
-        -- Wait for R6 body parts to load
-        local r6Ready = waitForR6Parts(character, 8)
-        
-        local humanoid = character:WaitForChild("Humanoid", 5)
+        -- Wait for Humanoid
+        local humanoid = character:WaitForChild("Humanoid", 8)
         if humanoid then
             humanoid.Died:Connect(function()
                 local pData = PlayerData:Get(player)
@@ -136,16 +108,14 @@ Players.PlayerAdded:Connect(function(player)
             end)
         end
         
-        -- Apply equipment visuals after R6 parts are ready
-        if r6Ready then
-            task.wait(0.2)  -- Small delay for parts to settle
-            local visuals = require(ServerModules:WaitForChild("EquipmentVisuals"))
-            local pData = PlayerData:Get(player)
-            if pData and character.Parent then
-                visuals:ApplyVisuals(character, pData)
-            end
-        else
-            warn("[Server] R6 parts not ready for " .. player.Name .. ". Visuals skipped.")
+        -- Wait a bit for body to fully load
+        task.wait(1)
+        
+        -- Apply equipment visuals (auto-detects R6/R15)
+        local visuals = require(ServerModules:WaitForChild("EquipmentVisuals"))
+        local pData = PlayerData:Get(player)
+        if pData and character.Parent then
+            visuals:ApplyVisuals(character, pData)
         end
     end)
     
