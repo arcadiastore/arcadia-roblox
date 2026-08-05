@@ -22,6 +22,14 @@ local function loadTemplates()
     for _, child in ipairs(Templates:GetChildren()) do
         TemplateCache[child.Name] = child
         print("[EquipVisual] Template loaded: " .. child.Name .. " (" .. child.ClassName .. ")")
+        
+        -- Jika Model, cari MeshPart di dalamnya
+        if child:IsA("Model") then
+            local mesh = child:FindFirstChildWhichIsA("MeshPart") or child:FindFirstChildWhichIsA("Part")
+            if mesh then
+                print("[EquipVisual]   -> MeshPart found in Model: " .. mesh.Name)
+            end
+        end
     end
 end
 loadTemplates()
@@ -231,6 +239,72 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                             acc:SetAttribute(TAG, true)
                             humanoid:AddAccessory(acc)
                             print("[EquipVisual] Accessory added: " .. templateName)
+                            
+                        elseif template and template:IsA("Model") then
+                            -- Model: ambil semua MeshPart/Part di dalamnya, buat Accessory
+                            local parts = template:GetDescendants()
+                            local mainPart = nil
+                            local allParts = {}
+                            
+                            for _, child in ipairs(parts) do
+                                if child:IsA("MeshPart") or child:IsA("Part") then
+                                    table.insert(allParts, child)
+                                    if not mainPart then
+                                        mainPart = child
+                                    end
+                                end
+                            end
+                            
+                            if mainPart then
+                                -- Buat Accessory dengan Handle = main part
+                                local acc = Instance.new("Accessory")
+                                acc.Name = "Equip_" .. itemId
+                                acc:SetAttribute(TAG, true)
+                                
+                                -- Clone semua parts
+                                local clonedParts = {}
+                                for _, p in ipairs(allParts) do
+                                    local clone = p:Clone()
+                                    clone.CanCollide = false
+                                    clone.Massless = true
+                                    clone:SetAttribute(TAG, true)
+                                    clonedParts[p.Name] = clone
+                                end
+                                
+                                -- Handle = main part
+                                local handle = clonedParts[mainPart.Name]
+                                handle.Name = "Handle"
+                                
+                                -- Apply offset
+                                local offset = v.offset or CFrame.new()
+                                if HAND_SLOTS[attachTo] then
+                                    offset = HAND_GRIP_OFFSET[rigType] * offset
+                                end
+                                handle.CFrame = CFrame.new() * offset
+                                
+                                -- Weld other parts to Handle
+                                for name, p in pairs(clonedParts) do
+                                    if name ~= mainPart.Name then
+                                        -- Cari original part untuk dapat relative CFrame
+                                        local origPart = template:FindFirstChild(name) or template:FindFirstChildWhichIsA("MeshPart", true)
+                                        if origPart and origPart ~= mainPart then
+                                            local relCF = mainPart.CFrame:ToObjectSpace(origPart.CFrame)
+                                            p.CFrame = handle.CFrame * relCF
+                                            local weld = Instance.new("WeldConstraint")
+                                            weld.Part0 = handle
+                                            weld.Part1 = p
+                                            weld.Parent = p
+                                        end
+                                        p.Parent = acc
+                                    end
+                                end
+                                
+                                handle.Parent = acc
+                                humanoid:AddAccessory(acc)
+                                print("[EquipVisual] Model added: " .. templateName .. " (" .. #allParts .. " parts)")
+                            else
+                                warn("[EquipVisual] Model " .. templateName .. " has no MeshPart/Part!")
+                            end
                             
                         elseif template and (template:IsA("MeshPart") or template:IsA("Part")) then
                             -- Clone MeshPart/Part template as Accessory
