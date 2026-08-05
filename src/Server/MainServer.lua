@@ -69,6 +69,7 @@ local EquipEvent = makeEvent("EquipEvent")
 local InventoryEvent = makeEvent("InventoryEvent")
 local RespawnEvent = makeEvent("RespawnEvent")
 local SkillEvent = makeEvent("SkillEvent")
+local AdminEvent = makeEvent("AdminEvent")
 
 -- Events table for modules
 local events = {
@@ -79,6 +80,7 @@ local events = {
     UpdateEvent = UpdateEvent,
     EquipEvent = EquipEvent,
     InventoryEvent = InventoryEvent,
+    AdminEvent = AdminEvent,
 }
 
 print("[Server] Events created!")
