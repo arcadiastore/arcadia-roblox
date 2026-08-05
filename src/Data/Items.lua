@@ -215,14 +215,12 @@ Items["wooden_sword"] = {
     jobReq = {"Warrior"},
     stats = {atk = 5},
     range = 8,
-    visual = makeSwordVisual({
-        bladeColor = Color3.fromRGB(224, 198, 145),
-        bladeMaterial = Enum.Material.Wood,
-        hiltColor = Color3.fromRGB(92, 64, 40),
-        hiltMaterial = Enum.Material.Wood,
-        guardColor = Color3.fromRGB(150, 120, 70),
+    visual = {
+        template = "wooden_sword",  -- Nama di ServerStorage/EquipTemplates
         scale = 1,
-    }),
+        offset = CFrame.new(1, 0, 0) * CFrame.Angles(0, 0, math.rad(-90)),
+        attachTo = "Right Arm",
+    },
     icon = "rbxassetid://136149295735575",
 }
 
@@ -238,11 +236,12 @@ Items["iron_sword"] = {
     jobReq = {"Warrior"},
     stats = {atk = 12},
     range = 8,
-    visual = makeSwordVisual({
-        bladeColor = Color3.fromRGB(180, 180, 180),  -- abu besi
-        hiltColor = Color3.fromRGB(70, 55, 40),
-        scale = 1.1,
-    }),
+    visual = {
+        template = "iron_sword",  -- Nama di ServerStorage/EquipTemplates
+        scale = 1,                -- sesuaikan ukuran
+        offset = CFrame.new(1, 0, 0) * CFrame.Angles(0, 0, math.rad(-90)),  -- rotasi biar dipegang benar
+        attachTo = "Right Arm",
+    },
     icon = "rbxassetid://0",
 }
 
