@@ -421,9 +421,10 @@ UserInputService.InputBegan:Connect(function(input, processed)
         print("[Client] F9 pressed - Admin Panel")
         AdminPanel:Toggle()
     elseif input.KeyCode == Enum.KeyCode.T then
+        -- Only open adjuster, closing is handled inside ItemAdjuster
         if not ItemAdjuster:IsActive() then
             print("[Client] T pressed - Item Adjuster")
-            ItemAdjuster:Toggle()
+            ItemAdjuster:Activate()
         end
     end
     
