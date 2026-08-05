@@ -127,57 +127,77 @@ local function applyWeapon(character, itemId, v, bodyPart, rigType)
     local offset = v.offset or CFrame.new(1.5, 0, 0)
     local scale = v.scale or 1
     
-    print("[EquipVisual] Template type: " .. template.ClassName)
+    -- Kumpulkan semua parts dari template
+    local allParts = {}
+    local mainPart = nil
     
-    -- Cari MeshPart dari template
-    local meshPart = nil
     if template:IsA("MeshPart") or template:IsA("Part") then
-        meshPart = template
+        allParts = {template}
+        mainPart = template
     elseif template:IsA("Model") then
-        meshPart = template:FindFirstChildWhichIsA("MeshPart") or template:FindFirstChildWhichIsA("Part")
-        if meshPart then
-            print("[EquipVisual] Found in Model: " .. meshPart.Name .. " (Size: " .. tostring(meshPart.Size) .. ")")
+        for _, child in ipairs(template:GetDescendants()) do
+            if child:IsA("MeshPart") or child:IsA("Part") then
+                table.insert(allParts, child)
+                if not mainPart then mainPart = child end
+            end
         end
     elseif template:IsA("Accessory") then
         local handle = template:FindFirstChild("Handle")
-        if handle and (handle:IsA("MeshPart") or handle:IsA("Part")) then
-            meshPart = handle
+        if handle then
+            allParts = {handle}
+            mainPart = handle
         end
     end
     
-    if not meshPart then
-        warn("[EquipVisual] No MeshPart found in template: " .. templateName)
+    if #allParts == 0 then
+        warn("[EquipVisual] No parts found in template: " .. templateName)
         return
     end
     
-    -- Clone
-    local part = meshPart:Clone()
-    part.Name = "Equip_" .. itemId
-    part.CanCollide = false
-    part.Massless = true
-    part.Anchored = false
-    part.Transparency = 0  -- Pastikan tidak transparan
-    part:SetAttribute(TAG, true)
+    print("[EquipVisual] Weapon " .. templateName .. ": " .. #allParts .. " parts")
     
-    -- Scale
-    if scale ~= 1 then
-        part.Size = part.Size * scale
+    -- Hitung offset relatif antar parts (dari posisi template asli)
+    -- mainPart jadi anchor, parts lain relatif terhadap mainPart
+    local mainCF = mainPart.CFrame
+    
+    -- Clone dan weld SEMUA parts
+    local clonedMain = nil
+    for i, origPart in ipairs(allParts) do
+        local clone = origPart:Clone()
+        clone.Name = "Equip_" .. itemId .. (i > 1 and ("_" .. i) or "")
+        clone.CanCollide = false
+        clone.Massless = true
+        clone.Anchored = false
+        clone.Transparency = 0
+        clone:SetAttribute(TAG, true)
+        
+        -- Scale
+        if scale ~= 1 then
+            clone.Size = clone.Size * scale
+        end
+        
+        -- Hitung posisi: offset relatif dari mainPart + offset user
+        local relCF = mainCF:ToObjectSpace(origPart.CFrame)
+        if scale ~= 1 then
+            relCF = CFrame.new(relCF.Position * scale) * (relCF - relCF.Position)
+        end
+        
+        clone.CFrame = bodyPart.CFrame * offset * relCF
+        
+        -- Weld ke body part
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = bodyPart
+        weld.Part1 = clone
+        weld.Parent = clone
+        
+        clone.Parent = character
+        
+        if i == 1 then
+            clonedMain = clone
+        end
     end
     
-    print("[EquipVisual] Cloned size: " .. tostring(part.Size) .. ", Transparency: " .. tostring(part.Transparency))
-    
-    -- Position di tangan
-    part.CFrame = bodyPart.CFrame * offset
-    
-    -- Weld ke tangan
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = bodyPart
-    weld.Part1 = part
-    weld.Parent = part
-    
-    part.Parent = character
-    
-    print("[EquipVisual] Weapon welded: " .. itemId .. " -> " .. bodyPart.Name .. " at " .. tostring(part.Position))
+    print("[EquipVisual] Weapon welded: " .. itemId .. " (" .. #allParts .. " parts) -> " .. bodyPart.Name)
 end
 
 -- ARMOR: Shirt/Pants template
@@ -230,25 +250,44 @@ local function applyAccessory(character, itemId, v, bodyPart, humanoid, slot)
         attName = "BodyFrontAttachment"
     end
     
-    local function makeAccessory(handle)
+    local function makeAccessoryFromParts(allParts, mainPart)
         local acc = Instance.new("Accessory")
         acc.Name = "Equip_" .. itemId
         acc.AccessoryType = accType
         acc:SetAttribute(TAG, true)
         
-        handle.Name = "Handle"
-        handle.CanCollide = false
-        handle.Massless = true
-        handle:SetAttribute(TAG, true)
+        local mainCF = mainPart.CFrame
+        local handle = nil
         
-        -- Attachment point
-        local att = Instance.new("Attachment")
-        att.Name = attName
-        att.Parent = handle
+        for i, origPart in ipairs(allParts) do
+            local clone = origPart:Clone()
+            clone.Name = (i == 1) and "Handle" or ("Equip_" .. itemId .. "_" .. i)
+            clone.CanCollide = false
+            clone.Massless = true
+            clone.Transparency = 0
+            clone:SetAttribute(TAG, true)
+            
+            if i == 1 then
+                -- Main part = Handle
+                local att = Instance.new("Attachment")
+                att.Name = attName
+                att.Parent = clone
+                handle = clone
+            else
+                -- Weld other parts to Handle
+                local relCF = mainCF:ToObjectSpace(origPart.CFrame)
+                clone.CFrame = handle.CFrame * relCF
+                local weld = Instance.new("WeldConstraint")
+                weld.Part0 = handle
+                weld.Part1 = clone
+                weld.Parent = clone
+            end
+            
+            clone.Parent = acc
+        end
         
-        handle.Parent = acc
         humanoid:AddAccessory(acc)
-        print("[EquipVisual] Accessory added: " .. itemId .. " (" .. accType.Name .. ")")
+        print("[EquipVisual] Accessory added: " .. itemId .. " (" .. #allParts .. " parts, " .. accType.Name .. ")")
     end
     
     if template then
@@ -260,18 +299,25 @@ local function applyAccessory(character, itemId, v, bodyPart, humanoid, slot)
             print("[EquipVisual] Accessory cloned: " .. itemId)
             
         elseif template:IsA("MeshPart") or template:IsA("Part") then
-            local handle = template:Clone()
-            makeAccessory(handle)
+            makeAccessoryFromParts({template}, template)
             
         elseif template:IsA("Model") then
-            local mesh = template:FindFirstChildWhichIsA("MeshPart") or template:FindFirstChildWhichIsA("Part")
-            if mesh then
-                local handle = mesh:Clone()
-                makeAccessory(handle)
+            local allParts = {}
+            local mainPart = nil
+            for _, child in ipairs(template:GetDescendants()) do
+                if child:IsA("MeshPart") or child:IsA("Part") then
+                    table.insert(allParts, child)
+                    if not mainPart then mainPart = child end
+                end
+            end
+            if #allParts > 0 then
+                makeAccessoryFromParts(allParts, mainPart)
+            else
+                warn("[EquipVisual] No parts in Model: " .. templateName)
             end
         end
     elseif v.parts then
-        -- Composite parts
+        -- Composite parts (basic shapes)
         local originCFrame = bodyPart.CFrame * (v.offset or CFrame.new())
         for _, p in ipairs(v.parts) do
             local part = Instance.new("Part")
