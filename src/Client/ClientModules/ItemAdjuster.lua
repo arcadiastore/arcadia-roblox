@@ -387,15 +387,14 @@ end
 function ItemAdjuster:ApplyOffset(offset)
     if not targetModel then return end
     
-    if targetModel:IsA("Model") then
-        targetModel:PivotTo(targetModel:GetPivot() + offset)
-    else
-        targetModel.CFrame = targetModel.CFrame + offset
-    end
-    
-    -- Update weld if exists
+    -- Only adjust weld C0, don't move the model directly
+    -- Moving model directly would move the character too
     if targetWeld and targetWeld:IsA("Weld") then
-        targetWeld.C0 = targetWeld.C0 + offset
+        targetWeld.C0 = targetWeld.C0 * CFrame.new(offset.X, offset.Y, offset.Z)
+    elseif targetWeld and targetWeld:IsA("WeldConstraint") then
+        -- WeldConstraint can't be adjusted, move model but counter-move character
+        -- Just print warning
+        warn("[ItemAdjuster] WeldConstraint detected - cannot adjust offset")
     end
     
     self:UpdateCoordDisplay()
@@ -406,16 +405,11 @@ function ItemAdjuster:ApplyRotation(rx, ry, rz)
     
     local rotCF = CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     
-    if targetModel:IsA("Model") then
-        local pivot = targetModel:GetPivot()
-        targetModel:PivotTo(pivot * rotCF)
-    else
-        targetModel.CFrame = targetModel.CFrame * rotCF
-    end
-    
-    -- Update weld if exists
+    -- Only adjust weld C0 rotation
     if targetWeld and targetWeld:IsA("Weld") then
         targetWeld.C0 = targetWeld.C0 * rotCF
+    elseif targetWeld and targetWeld:IsA("WeldConstraint") then
+        warn("[ItemAdjuster] WeldConstraint detected - cannot adjust rotation")
     end
     
     self:UpdateCoordDisplay()
