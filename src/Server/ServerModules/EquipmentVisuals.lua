@@ -3,7 +3,7 @@
     Shows equipped items on player character
     
     Supports R6 and R15.
-    Uses MeshPart for proper 3D assets.
+    Uses Accessory system (cara Roblox handle equipment).
 ]]
 
 local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
@@ -12,7 +12,7 @@ local EquipmentVisuals = {}
 
 local TAG = "EquipVisual"
 
--- Template storage (letakkan MeshPart templates di ServerStorage)
+-- Template storage (letakkan Accessory/MeshPart templates di ServerStorage)
 local Templates = game.ServerStorage:FindFirstChild("EquipTemplates")
 
 -- Load templates into memory on script start
@@ -20,10 +20,8 @@ local TemplateCache = {}
 local function loadTemplates()
     if not Templates then return end
     for _, child in ipairs(Templates:GetChildren()) do
-        if child:IsA("MeshPart") or child:IsA("Part") then
-            TemplateCache[child.Name] = child
-            print("[EquipVisual] Template loaded: " .. child.Name)
-        end
+        TemplateCache[child.Name] = child
+        print("[EquipVisual] Template loaded: " .. child.Name .. " (" .. child.ClassName .. ")")
     end
 end
 loadTemplates()
@@ -32,9 +30,6 @@ loadTemplates()
 local R6_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 
 -- Map slot attachTo to actual body part names
--- PENTING: untuk weapon (Right Arm/Left Arm) kita attach ke part TANGAN
--- (RightHand/LeftHand) di R15, bukan ke lengan atas (dekat bahu). Ini yang
--- membuat senjata terlihat "dipegang" dengan benar, bukan menempel di bahu.
 local ATTACH_MAP = {
     ["Head"]       = {R6 = "Head",        R15 = "Head"},
     ["Torso"]      = {R6 = "Torso",       R15 = "UpperTorso"},
@@ -44,14 +39,10 @@ local ATTACH_MAP = {
     ["Left Leg"]   = {R6 = "Left Leg",    R15 = "LeftUpperLeg"},
 }
 
--- Slot mana saja yang dianggap "tangan" (perlu koreksi titik genggam)
+-- Slot mana saja yang dianggap "tangan"
 local HAND_SLOTS = { ["Right Arm"] = true, ["Left Arm"] = true }
 
--- Offset tambahan dari titik tengah part ke titik genggam tangan yang wajar.
--- R6: "Right Arm"/"Left Arm" adalah 1 part utuh dari bahu sampai tangan
---     (tinggi 2 stud), jadi titik genggam ada di dekat UJUNG BAWAH part.
--- R15: "RightHand"/"LeftHand" sudah berupa part kecil di tangan, jadi cukup
---     sedikit koreksi ke arah jari (bukan pergelangan).
+-- Offset tambahan untuk tangan
 local HAND_GRIP_OFFSET = {
     R6  = CFrame.new(0, -0.85, 0),
     R15 = CFrame.new(0, -0.15, 0),
@@ -96,6 +87,18 @@ end
 -- Remove all visual parts
 function EquipmentVisuals:ClearVisuals(character)
     if not character then return end
+    
+    -- Remove custom accessories (marked with TAG)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        for _, accessory in ipairs(character:GetChildren()) do
+            if accessory:IsA("Accessory") and accessory:GetAttribute(TAG) then
+                accessory:Destroy()
+            end
+        end
+    end
+    
+    -- Remove any remaining tagged parts
     for _, child in ipairs(character:GetDescendants()) do
         if child:IsA("BasePart") and child:GetAttribute(TAG) then
             child:Destroy()
@@ -103,149 +106,65 @@ function EquipmentVisuals:ClearVisuals(character)
     end
 end
 
--- Create equipment part (MeshPart if meshId provided, else basic Part)
--- extraOffset = koreksi titik genggam tangan (lihat HAND_GRIP_OFFSET), sudah
--- termasuk ke dalam origin sebelum offset spesifik item diterapkan.
-local function createEquipPart(character, bodyPartName, visualData, itemData, extraOffset)
-    local bodyPart = character:FindFirstChild(bodyPartName)
-    if not bodyPart then 
-        warn("[EquipVisual] Body part not found: " .. bodyPartName)
-        return nil 
+-- Create Accessory from MeshPart template
+local function createAccessoryFromTemplate(template, itemData, offset)
+    local accessory = Instance.new("Accessory")
+    accessory.Name = "Equip_" .. (itemData.id or "unknown")
+    accessory:SetAttribute(TAG, true)
+    
+    -- Clone the handle from template
+    local handle = template:Clone()
+    handle.Name = "Handle"
+    handle.CanCollide = false
+    handle.Massless = true
+    handle:SetAttribute(TAG, true)
+    
+    -- Apply offset if provided
+    if offset then
+        handle.CFrame = CFrame.new() * offset
     end
     
-    local part
-    local itemId = itemData.id or "unknown"
-    local templateName = visualData.template  -- Nama template di ServerStorage
-    
-    -- PRIORITAS: Clone dari template (paling reliable)
-    if templateName and TemplateCache[templateName] then
-        part = TemplateCache[templateName]:Clone()
-        print("[EquipVisual] Cloned template: " .. templateName)
-    elseif TemplateCache[itemId] then
-        -- Coba pakai nama item sebagai template name
-        part = TemplateCache[itemId]:Clone()
-        print("[EquipVisual] Cloned template by item ID: " .. itemId)
-    else
-        -- Fallback: basic Part (tanpa mesh)
-        part = Instance.new("Part")
-        if visualData.shape == "Ball" then
-            part.Shape = Enum.PartType.Ball
-        elseif visualData.shape == "Cylinder" then
-            part.Shape = Enum.PartType.Cylinder
-        end
-        part.Size = visualData.size or Vector3.new(1, 1, 1)
-        -- Hanya warn jika benar-benar tidak ada visual data
-        if not visualData.shape and not visualData.size then
-            warn("[EquipVisual] No visual data for " .. itemId .. ". Tambahkan 'parts' atau 'shape/size' di visual data.")
-        end
-    end
-    
-    part.Name = "Equip_" .. itemId
-    part.Color = visualData.color or Color3.fromRGB(255, 255, 255)
-    part.Material = visualData.material or Enum.Material.SmoothPlastic
-    part.CanCollide = false
-    part.Anchored = false
-    part.Massless = true
-    part:SetAttribute(TAG, true)
-    
-    -- Scale if needed
-    if visualData.scale then
-        part.Size = part.Size * visualData.scale
-    end
-    
-    -- Attach to body part (origin = titik genggam tangan, lalu offset item)
-    local origin = bodyPart.CFrame * (extraOffset or CFrame.new())
-    local offset = visualData.offset or CFrame.new()
-    part.CFrame = origin * offset
-    
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = bodyPart
-    weld.Part1 = part
-    weld.Parent = part
-    
-    part.Parent = character
-    
-    return part
+    handle.Parent = accessory
+    return accessory
 end
 
--- Buat 1 sub-part untuk composite weapon (Block/Cylinder/Ball/Wedge/CornerWedge)
--- Wedge/CornerWedge dipakai supaya bilah senjata TAPERED (meruncing) alih-alih
--- kotak polos, tanpa perlu mesh custom.
-local function createShapedSubPart(shape, size, color, material)
-    local part
-    if shape == "Wedge" then
-        part = Instance.new("WedgePart")
-    elseif shape == "CornerWedge" then
-        part = Instance.new("CornerWedgePart")
-    else
-        part = Instance.new("Part")
-        if shape == "Ball" then
-            part.Shape = Enum.PartType.Ball
-        elseif shape == "Cylinder" then
-            part.Shape = Enum.PartType.Cylinder
-        end
+-- Create basic Accessory from Part data
+local function createBasicAccessory(visualData, itemData, offset)
+    local accessory = Instance.new("Accessory")
+    accessory.Name = "Equip_" .. (itemData.id or "unknown")
+    accessory:SetAttribute(TAG, true)
+    
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    
+    if visualData.shape == "Ball" then
+        handle.Shape = Enum.PartType.Ball
+    elseif visualData.shape == "Cylinder" then
+        handle.Shape = Enum.PartType.Cylinder
     end
-    part.Size = size or Vector3.new(0.2, 0.2, 0.2)
-    part.Color = color or Color3.fromRGB(255, 255, 255)
-    part.Material = material or Enum.Material.SmoothPlastic
-    part.CanCollide = false
-    part.Anchored = false
-    part.Massless = true
-    part.TopSurface = Enum.SurfaceType.Smooth
-    part.BottomSurface = Enum.SurfaceType.Smooth
-    return part
-end
-
--- Bangun 1 item equipment (senjata, armor, aksesoris, wings, dll) dari
--- beberapa sub-part (visualData.parts) supaya berbentuk nyata, alih-alih
--- 1 kotak polos. Dipakai untuk SEMUA kategori equipment, bukan cuma senjata.
--- Setiap entry di `parts` boleh punya `relativeTo = "NamaPartLain"` supaya
--- posisinya dihitung relatif terhadap part lain yang sudah dibuat (misal
--- bilah relatif terhadap gagang), sehingga mudah disusun jadi 1 bentuk utuh.
-local function buildCompositeVisual(character, bodyPart, originCFrame, itemData)
-    local v = itemData.visual
-    local partsSpec = v.parts
-    if not partsSpec or #partsSpec == 0 then return nil end
-
-    local built = {}
-    local primary = nil
-
-    for i, spec in ipairs(partsSpec) do
-        local part = createShapedSubPart(
-            spec.shape,
-            spec.size,
-            spec.color or v.color,
-            spec.material or v.material
-        )
-        local subName = spec.name or ("part" .. i)
-        part.Name = "Equip_" .. itemData.id .. "_" .. subName
-        part:SetAttribute(TAG, true)
-
-        local baseCFrame = originCFrame
-        if spec.relativeTo and built[spec.relativeTo] then
-            baseCFrame = built[spec.relativeTo]
-        end
-
-        local worldCFrame = baseCFrame * (spec.offset or CFrame.new())
-        part.CFrame = worldCFrame
-        part.Parent = character
-
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = bodyPart
-        weld.Part1 = part
-        weld.Parent = part
-
-        built[subName] = worldCFrame
-        if not primary then primary = part end
+    
+    handle.Size = visualData.size or Vector3.new(1, 1, 1)
+    handle.Color = visualData.color or Color3.fromRGB(255, 255, 255)
+    handle.Material = visualData.material or Enum.Material.SmoothPlastic
+    handle.CanCollide = false
+    handle.Massless = true
+    handle:SetAttribute(TAG, true)
+    
+    if offset then
+        handle.CFrame = CFrame.new() * offset
     end
-
-    return primary
+    
+    handle.Parent = accessory
+    return accessory
 end
 
 -- Apply equipment visuals
 function EquipmentVisuals:ApplyVisuals(character, playerData)
     if not character then return end
     if not playerData then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
     
     local rigType = waitForBody(character, 8)
     if not rigType then
@@ -268,13 +187,7 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
             if itemData and itemData.visual then
                 local v = itemData.visual
                 
-                local attachTo = v.attachTo or "Torso"
-                local bodyPartName = getBodyPartName(attachTo, rigType)
-                
-                print("[EquipVisual] " .. itemId .. " -> " .. bodyPartName)
-                
                 -- Shirt/Pants template (armor yang mengikuti bentuk badan)
-                -- Jika ada shirt/pants template, apply dan skip parts
                 if v.shirtTemplate and v.shirtTemplate ~= "" then
                     local shirt = character:FindFirstChildOfClass("Shirt") or Instance.new("Shirt")
                     shirt.ShirtTemplate = v.shirtTemplate
@@ -288,7 +201,7 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                     print("[EquipVisual] Pants applied: " .. v.pantsTemplate)
                 end
                 
-                -- FullBody costume (tetap ganti warna body parts)
+                -- FullBody costume
                 if v.fullBody then
                     for _, partName in ipairs(R6_PARTS) do
                         local rName = getBodyPartName(partName, rigType)
@@ -299,125 +212,134 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                     end
                 end
                 
-                -- SKIP parts creation jika sudah ada shirt/pants template
+                -- Skip parts jika sudah ada clothing template
                 local hasClothing = (v.shirtTemplate and v.shirtTemplate ~= "") or (v.pantsTemplate and v.pantsTemplate ~= "")
                 
                 if not hasClothing then
-                    -- Koreksi ke titik genggam tangan (hanya untuk slot tangan)
-                    local extraOffset = HAND_SLOTS[attachTo] and HAND_GRIP_OFFSET[rigType] or nil
+                    local attachTo = v.attachTo or "Torso"
+                    local bodyPartName = getBodyPartName(attachTo, rigType)
+                    local bodyPart = character:FindFirstChild(bodyPartName)
                     
-                    -- Create main part: kalau item punya "parts" (bentuk composite,
-                    -- misal pedang: gagang+guard+bilah+ujung, atau helm: dome+brim),
-                    -- pakai itu supaya berbentuk nyata. Kalau tidak, fallback ke
-                    -- template/kotak lama.
-                    local part
-                    if v.parts then
-                        local bodyPart = character:FindFirstChild(bodyPartName)
-                        if bodyPart then
-                            local originCFrame = bodyPart.CFrame * (extraOffset or CFrame.new()) * (v.offset or CFrame.new())
-                            part = buildCompositeVisual(character, bodyPart, originCFrame, itemData)
-                        end
-                    else
-                        part = createEquipPart(character, bodyPartName, v, itemData, extraOffset)
-                    end
-                    
-                    -- Orb on staff
-                    if part and v.orb then
-                    local orb = createEquipPart(character, bodyPartName, {
-                        meshId = v.orb.meshId,
-                        textureId = v.orb.textureId,
-                        color = v.orb.color or Color3.fromRGB(255, 255, 255),
-                        size = v.orb.size or Vector3.new(0.5, 0.5, 0.5),
-                        material = Enum.Material.Neon,
-                        shape = "Ball",
-                        offset = CFrame.new(),
-                    }, {id = itemData.id .. "_orb"})
-                    
-                    if orb then
-                        -- Reposition relative to main part
-                        local orbOffset = v.orb.offset or CFrame.new(0, 1.5, 0)
-                        orb.CFrame = part.CFrame * orbOffset
+                    if bodyPart then
+                        -- Check for Accessory template
+                        local templateName = v.template or itemId
+                        local template = TemplateCache[templateName]
                         
-                        -- Reweld to main part
-                        orb:FindFirstChild("WeldConstraint"):Destroy()
-                        local orbWeld = Instance.new("WeldConstraint")
-                        orbWeld.Part0 = part
-                        orbWeld.Part1 = orb
-                        orbWeld.Parent = orb
-                    end
-                end
-                
-                -- Blade on axe
-                if part and v.blade then
-                    local blade = createEquipPart(character, bodyPartName, {
-                        meshId = v.blade.meshId,
-                        textureId = v.blade.textureId,
-                        color = v.blade.color or Color3.fromRGB(200, 200, 200),
-                        size = v.blade.size or Vector3.new(1, 1, 0.2),
-                        material = Enum.Material.Metal,
-                        offset = CFrame.new(),
-                    }, {id = itemData.id .. "_blade"})
-                    
-                    if blade then
-                        local bladeOffset = v.blade.offset or CFrame.new(0, 1, 0)
-                        blade.CFrame = part.CFrame * bladeOffset
-                        blade:FindFirstChild("WeldConstraint"):Destroy()
-                        local bladeWeld = Instance.new("WeldConstraint")
-                        bladeWeld.Part0 = part
-                        bladeWeld.Part1 = blade
-                        bladeWeld.Parent = blade
-                    end
-                end
-                
-                -- Accent on hat
-                if part and v.accent then
-                    local accent = createEquipPart(character, bodyPartName, {
-                        meshId = v.accent.meshId,
-                        color = v.accent.color or Color3.fromRGB(255, 255, 255),
-                        size = v.accent.size or Vector3.new(0.5, 0.2, 0.5),
-                        offset = CFrame.new(),
-                    }, {id = itemData.id .. "_accent"})
-                    
-                    if accent then
-                        local accentOffset = v.accent.offset or CFrame.new()
-                        accent.CFrame = part.CFrame * accentOffset
-                        accent:FindFirstChild("WeldConstraint"):Destroy()
-                        local accentWeld = Instance.new("WeldConstraint")
-                        accentWeld.Part0 = part
-                        accentWeld.Part1 = accent
-                        accentWeld.Parent = accent
-                    end
-                end
-                
-                -- Mirror (shoes, atau item lain yang perlu di 2 sisi)
-                if v.mirror then
-                    local mirrorAttach = (attachTo == "Left Leg") and "Right Leg" or "Left Leg"
-                    local mirrorPartName = getBodyPartName(mirrorAttach, rigType)
-                    local mirrorBody = character:FindFirstChild(mirrorPartName)
-                    if mirrorBody then
-                        if v.parts then
-                            -- Composite (misal boot dari sole+cuff+toe): bangun
-                            -- ulang set part yang sama di kaki sebelah. Geometrinya
-                            -- sudah simetris kiri-kanan (tidak ada offset X lateral
-                            -- di dalam `parts`), jadi tidak perlu dibalik manual.
-                            local mirrorOrigin = mirrorBody.CFrame * (v.offset or CFrame.new())
-                            buildCompositeVisual(character, mirrorBody, mirrorOrigin, itemData)
-                        else
-                            local mirrorPart = createEquipPart(character, mirrorPartName, v, itemData)
-                            if mirrorPart then
-                                local flippedOffset = CFrame.new(
-                                    -(v.offset and v.offset.X or 0),
-                                    v.offset and v.offset.Y or 0,
-                                    v.offset and v.offset.Z or 0
-                                )
-                                mirrorPart.CFrame = mirrorBody.CFrame * flippedOffset
+                        if template and template:IsA("Accessory") then
+                            -- Clone Accessory template
+                            local acc = template:Clone()
+                            acc:SetAttribute(TAG, true)
+                            humanoid:AddAccessory(acc)
+                            print("[EquipVisual] Accessory added: " .. templateName)
+                            
+                        elseif template and (template:IsA("MeshPart") or template:IsA("Part")) then
+                            -- Clone MeshPart/Part template as Accessory
+                            local offset = v.offset or CFrame.new()
+                            if HAND_SLOTS[attachTo] then
+                                offset = HAND_GRIP_OFFSET[rigType] * offset
                             end
+                            local acc = createAccessoryFromTemplate(template, itemData, offset)
+                            humanoid:AddAccessory(acc)
+                            print("[EquipVisual] Template part added: " .. templateName)
+                            
+                        elseif v.parts then
+                            -- Composite parts (built from basic shapes)
+                            local originCFrame = bodyPart.CFrame
+                            if HAND_SLOTS[attachTo] then
+                                originCFrame = originCFrame * HAND_GRIP_OFFSET[rigType]
+                            end
+                            originCFrame = originCFrame * (v.offset or CFrame.new())
+                            
+                            for _, p in ipairs(v.parts) do
+                                local part = Instance.new("Part")
+                                if p.shape == "Ball" then
+                                    part.Shape = Enum.PartType.Ball
+                                elseif p.shape == "Cylinder" then
+                                    part.Shape = Enum.PartType.Cylinder
+                                end
+                                
+                                part.Name = "Equip_" .. (p.name or itemId)
+                                part.Size = p.size or Vector3.new(1, 1, 1)
+                                part.Color = p.color or Color3.fromRGB(255, 255, 255)
+                                part.Material = p.material or Enum.Material.SmoothPlastic
+                                part.CanCollide = false
+                                part.Anchored = false
+                                part.Massless = true
+                                part:SetAttribute(TAG, true)
+                                
+                                -- Position relative to body
+                                local pOffset = p.offset or CFrame.new()
+                                if p.relativeTo then
+                                    -- Find parent part
+                                    for _, existing in ipairs(character:GetChildren()) do
+                                        if existing:IsA("BasePart") and existing.Name == "Equip_" .. p.relativeTo then
+                                            part.CFrame = existing.CFrame * pOffset
+                                            break
+                                        end
+                                    end
+                                else
+                                    part.CFrame = originCFrame * pOffset
+                                end
+                                
+                                -- Weld to body
+                                local weld = Instance.new("WeldConstraint")
+                                weld.Part0 = bodyPart
+                                weld.Part1 = part
+                                weld.Parent = part
+                                
+                                part.Parent = character
+                            end
+                            
+                            -- Mirror for boots
+                            if v.mirror then
+                                local mirrorAttach = (attachTo == "Left Leg") and "Right Leg" or "Left Leg"
+                                local mirrorPartName = getBodyPartName(mirrorAttach, rigType)
+                                local mirrorBody = character:FindFirstChild(mirrorPartName)
+                                if mirrorBody then
+                                    for _, p in ipairs(v.parts) do
+                                        local part = Instance.new("Part")
+                                        if p.shape == "Ball" then
+                                            part.Shape = Enum.PartType.Ball
+                                        elseif p.shape == "Cylinder" then
+                                            part.Shape = Enum.PartType.Cylinder
+                                        end
+                                        
+                                        part.Name = "Equip_" .. (p.name or itemId) .. "_mirror"
+                                        part.Size = p.size or Vector3.new(1, 1, 1)
+                                        part.Color = p.color or Color3.fromRGB(255, 255, 255)
+                                        part.Material = p.material or Enum.Material.SmoothPlastic
+                                        part.CanCollide = false
+                                        part.Anchored = false
+                                        part.Massless = true
+                                        part:SetAttribute(TAG, true)
+                                        
+                                        -- Mirror offset
+                                        local pOffset = p.offset or CFrame.new()
+                                        local mirrorOrigin = mirrorBody.CFrame * (v.offset or CFrame.new())
+                                        part.CFrame = mirrorOrigin * pOffset
+                                        
+                                        local weld = Instance.new("WeldConstraint")
+                                        weld.Part0 = mirrorBody
+                                        weld.Part1 = part
+                                        weld.Parent = part
+                                        
+                                        part.Parent = character
+                                    end
+                                end
+                            end
+                            
+                            print("[EquipVisual] Composite created for " .. itemId)
+                            
+                        else
+                            -- Single basic part (fallback)
+                            local acc = createBasicAccessory(v, itemData, v.offset)
+                            humanoid:AddAccessory(acc)
+                            print("[EquipVisual] Basic part added: " .. itemId)
                         end
                     end
                 end
                 
                 print("[EquipVisual] OK: " .. itemId)
-                end  -- end if not hasClothing
             end
         end
     end
