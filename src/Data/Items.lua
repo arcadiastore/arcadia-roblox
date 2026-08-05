@@ -216,9 +216,9 @@ Items["wooden_sword"] = {
     stats = {atk = 5},
     range = 8,
     visual = {
-        template = "wooden_sword",  -- Nama di ServerStorage/EquipTemplates
+        template = "wooden_sword",
         scale = 1,
-        offset = CFrame.new(1, 0, 0) * CFrame.Angles(0, 0, math.rad(-90)),
+        offset = CFrame.new(1.5, -0.5, 0) * CFrame.Angles(0, 0, math.rad(-90)),
         attachTo = "Right Arm",
     },
     icon = "rbxassetid://136149295735575",
@@ -237,9 +237,9 @@ Items["iron_sword"] = {
     stats = {atk = 12},
     range = 8,
     visual = {
-        template = "iron_sword",  -- Nama di ServerStorage/EquipTemplates
-        scale = 1,                -- sesuaikan ukuran
-        offset = CFrame.new(1, 0, 0) * CFrame.Angles(0, 0, math.rad(-90)),  -- rotasi biar dipegang benar
+        template = "iron_sword",
+        scale = 1,
+        offset = CFrame.new(1.5, -0.5, 0) * CFrame.Angles(0, 0, math.rad(-90)),
         attachTo = "Right Arm",
     },
     icon = "rbxassetid://0",

@@ -31,7 +31,7 @@ local R6_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left L
 
 -- Map slot ke body part
 local SLOT_TO_PART = {
-    ["weapon1h"] = "Right Arm",
+    ["weapon1h"] = "Right Arm",  -- R6: Right Arm, R15: RightUpperArm (bukan RightHand)
     ["weapon2h"] = "Right Arm",
     ["hat"]      = "Head",
     ["tshirt"]   = "Torso",
@@ -47,8 +47,8 @@ local SLOT_TO_PART = {
 local R15_MAP = {
     ["Head"]      = "Head",
     ["Torso"]     = "UpperTorso",
-    ["Right Arm"] = "RightHand",
-    ["Left Arm"]  = "LeftHand",
+    ["Right Arm"] = "RightUpperArm",  -- Pakai lengan atas, bukan tangan
+    ["Left Arm"]  = "LeftUpperArm",
     ["Right Leg"] = "RightUpperLeg",
     ["Left Leg"]  = "LeftUpperLeg",
 }
