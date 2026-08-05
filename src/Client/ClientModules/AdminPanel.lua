@@ -33,10 +33,18 @@ local ERROR_COLOR = Color3.fromRGB(255, 80, 80)
 
 function AdminPanel:Create(parentGui)
     -- Wait for AdminEvent
-    local Events = ReplicatedStorage:WaitForChild("Events", 10)
-    if not Events then return end
-    AdminEvent = Events:WaitForChild("AdminEvent", 10)
-    if not AdminEvent then return end
+    local Events = ReplicatedStorage:WaitForChild("Events", 30)
+    if not Events then
+        warn("[AdminPanel] Events folder not found!")
+        return
+    end
+    AdminEvent = Events:WaitForChild("AdminEvent", 30)
+    if not AdminEvent then
+        warn("[AdminPanel] AdminEvent not found!")
+        return
+    end
+    
+    print("[AdminPanel] AdminEvent found, building UI...")
     
     -- Main GUI
     gui = Instance.new("ScreenGui")
@@ -723,6 +731,10 @@ function AdminPanel:Close()
 end
 
 function AdminPanel:Toggle()
+    if not gui then
+        warn("[AdminPanel] GUI not created yet!")
+        return
+    end
     if isOpen then
         self:Close()
     else

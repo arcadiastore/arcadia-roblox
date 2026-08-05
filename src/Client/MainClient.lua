@@ -417,7 +417,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
         SkillBar:HandleInput(input)
     elseif input.KeyCode == Enum.KeyCode.F7 then
         print("[Client] F7 pressed - Admin Panel")
+        print("[Client] AdminPanel exists:", AdminPanel ~= nil)
         AdminPanel:Toggle()
+        print("[Client] AdminPanel toggled, open:", AdminPanel:IsOpen())
     end
 end)
 
