@@ -63,6 +63,7 @@ local EquipmentUI = require(ClientModules:WaitForChild("EquipmentUI"))
 local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local AutoPanel = require(ClientModules:WaitForChild("AutoPanel"))
 local SkillBar = require(ClientModules:WaitForChild("SkillBar"))
+local AdminPanel = require(ClientModules:WaitForChild("AdminPanel"))
 
 print("[Client] All modules loaded!")
 
@@ -80,6 +81,7 @@ InventoryUI:Create(playerGui)
 AutoPanel:Create(playerGui)
 SkillBar:Create()
 QuestTracker:SetAutoPanel(AutoPanel)
+AdminPanel:Create(playerGui)
 
 print("[Client] All UI created!")
 
@@ -413,6 +415,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
     elseif input.KeyCode == Enum.KeyCode.One or input.KeyCode == Enum.KeyCode.Two or
            input.KeyCode == Enum.KeyCode.Three or input.KeyCode == Enum.KeyCode.Four then
         SkillBar:HandleInput(input)
+    elseif input.KeyCode == Enum.KeyCode.F7 then
+        print("[Client] F7 pressed - Admin Panel")
+        AdminPanel:Toggle()
     end
 end)
 

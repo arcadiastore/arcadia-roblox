@@ -42,6 +42,7 @@ local QuestSystem = require(ServerModules:WaitForChild("QuestSystem"))
 local ShopSystem = require(ServerModules:WaitForChild("ShopSystem"))
 local DialogueSystem = require(ServerModules:WaitForChild("DialogueSystem"))
 local WorldBuilder = require(ServerModules:WaitForChild("WorldBuilder"))
+local AdminSystem = require(ServerModules:WaitForChild("AdminSystem"))
 
 print("[Server] All modules loaded!")
 
@@ -84,6 +85,11 @@ local events = {
 }
 
 print("[Server] Events created!")
+
+-- Init Admin System
+AdminSystem:Init(events)
+
+print("[Server] AdminSystem initialized!")
 
 -- ============================================
 -- PLAYER CONNECTIONS
