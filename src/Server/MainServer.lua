@@ -105,37 +105,62 @@ Players.PlayerAdded:Connect(function(player)
             local ry = tonumber(args[7]) or 0
             local rz = tonumber(args[8]) or 0
             
-            -- Cari part yang equipped
             local character = player.Character
             if not character then return end
             
-            local equipPart = character:FindFirstChild("Equip_" .. itemId)
-            if not equipPart then
-                -- Coba cari dengan suffix
-                for _, child in ipairs(character:GetChildren()) do
-                    if child.Name:sub(1, #("Equip_" .. itemId)) == "Equip_" .. itemId then
-                        equipPart = child
-                        break
+            -- Cari semua parts yang dimulai dengan "Equip_itemId"
+            local prefix = "Equip_" .. itemId
+            local found = false
+            
+            local bodyPart = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
+            if not bodyPart then
+                print("[ADJUST] Body part not found!")
+                return
+            end
+            
+            local offset = CFrame.new(x, y, z) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+            
+            -- Cari main part (pertama, tanpa suffix angka)
+            local mainPart = character:FindFirstChild(prefix)
+            if not mainPart then
+                print("[ADJUST] " .. prefix .. " not found! Equip item first.")
+                return
+            end
+            
+            -- Hapus semua weld lama, pasang ulang dengan offset baru
+            for _, child in ipairs(character:GetChildren()) do
+                if child:IsA("BasePart") and child.Name:sub(1, #prefix) == prefix then
+                    -- Hapus weld lama
+                    for _, w in ipairs(child:GetChildren()) do
+                        if w:IsA("WeldConstraint") then w:Destroy() end
                     end
+                    
+                    -- Hitung posisi baru
+                    if child == mainPart then
+                        child.CFrame = bodyPart.CFrame * offset
+                    else
+                        -- Parts lain: hitung relatif dari mainPart
+                        -- Ini tidak sempurna tapi cukup untuk debug
+                        child.CFrame = bodyPart.CFrame * offset
+                    end
+                    
+                    -- Weld baru
+                    local weld = Instance.new("WeldConstraint")
+                    weld.Part0 = bodyPart
+                    weld.Part1 = child
+                    weld.Parent = child
+                    
+                    found = true
                 end
             end
             
-            if equipPart then
-                local bodyPart = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
-                if bodyPart then
-                    local offset = CFrame.new(x, y, z) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
-                    local relCF = CFrame.new()  -- Reset relative
-                    -- Recalculate all equip parts for this item
-                    equipPart.CFrame = bodyPart.CFrame * offset
-                    
-                    -- Print untuk copy ke Items.lua
-                    print("========================================")
-                    print("[ADJUST] " .. itemId .. ":")
-                    print("  offset = CFrame.new(" .. x .. ", " .. y .. ", " .. z .. ") * CFrame.Angles(math.rad(" .. rx .. "), math.rad(" .. ry .. "), math.rad(" .. rz .. "))")
-                    print("========================================")
-                end
-            else
-                print("[ADJUST] Equip_" .. itemId .. " not found! Equip item first.")
+            if found then
+                print("========================================")
+                print("[ADJUST] " .. itemId .. ":")
+                print("  offset = CFrame.new(" .. x .. ", " .. y .. ", " .. z .. ")")
+                print("         * CFrame.Angles(math.rad(" .. rx .. "), math.rad(" .. ry .. "), math.rad(" .. rz .. "))")
+                print("========================================")
+                print(">> Copy baris di atas ke Items.lua visual.offset")
             end
         end
     end)
