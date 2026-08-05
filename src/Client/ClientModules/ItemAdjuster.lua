@@ -25,7 +25,8 @@ local mouse = player:GetMouse()
 local isActive = false
 local currentSlot = "weapon1h"  -- Current equipment slot being adjusted
 local targetModel = nil         -- Model/part being dragged
-local targetWeld = nil          -- Weld to adjust
+local targetWeld = nil          -- Primary weld for display
+local allWelds = {}             -- ALL welds to adjust
 local isDragging = false
 local isRotating = false
 local lastMousePos = nil
@@ -213,47 +214,36 @@ end
 
 function ItemAdjuster:SelectTarget(model)
     targetModel = model
-    targetWeld = nil
+    allWelds = {}  -- Collect ALL welds
     
-    -- Find the weld that attaches this to character
-    -- Look for EquipWeld_ first (our custom welds)
+    -- Find ALL welds on this model
     for _, desc in ipairs(model:GetDescendants()) do
-        if desc:IsA("Weld") and desc.Name:match("^EquipWeld_") then
-            targetWeld = desc
-            break
+        if desc:IsA("Weld") then
+            table.insert(allWelds, desc)
         end
     end
     
-    -- Fallback: any Weld
-    if not targetWeld then
-        for _, desc in ipairs(model:GetDescendants()) do
-            if desc:IsA("Weld") then
-                targetWeld = desc
-                break
-            end
-        end
-    end
-    
-    -- Also check parent if model is a part
-    if not targetWeld and model:IsA("BasePart") then
+    -- Also check if model itself is a part with welds
+    if model:IsA("BasePart") then
         for _, desc in ipairs(model:GetChildren()) do
             if desc:IsA("Weld") then
-                targetWeld = desc
-                break
+                table.insert(allWelds, desc)
             end
         end
     end
+    
+    -- Set primary weld for display
+    targetWeld = allWelds[1]
     
     self:UpdateCoordDisplay()
     
     if statusLabel then
-        statusLabel.Text = "Slot: " .. currentSlot .. " | Model: " .. model.Name .. " | Weld: " .. (targetWeld and targetWeld.Name or "NONE")
+        statusLabel.Text = "Slot: " .. currentSlot .. " | Model: " .. model.Name .. " | Welds: " .. #allWelds
     end
     
-    if targetWeld then
-        print("[ItemAdjuster] Found weld: " .. targetWeld.Name .. " C0: " .. tostring(targetWeld.C0))
-    else
-        warn("[ItemAdjuster] No weld found on " .. model.Name)
+    print("[ItemAdjuster] Found " .. #allWelds .. " welds on " .. model.Name)
+    for i, w in ipairs(allWelds) do
+        print("  " .. i .. ". " .. w.Name .. " (Part0=" .. (w.Part0 and w.Part0.Name or "nil") .. ")")
     end
 end
 
@@ -391,14 +381,15 @@ end
 function ItemAdjuster:ApplyOffset(offset)
     if not targetModel then return end
     
-    -- Only adjust weld C0, don't move the model directly
-    -- Moving model directly would move the character too
-    if targetWeld and targetWeld:IsA("Weld") then
-        targetWeld.C0 = targetWeld.C0 * CFrame.new(offset.X, offset.Y, offset.Z)
-    elseif targetWeld and targetWeld:IsA("WeldConstraint") then
-        -- WeldConstraint can't be adjusted, move model but counter-move character
-        -- Just print warning
-        warn("[ItemAdjuster] WeldConstraint detected - cannot adjust offset")
+    local cfOffset = CFrame.new(offset.X, offset.Y, offset.Z)
+    
+    -- Adjust ALL welds
+    if allWelds and #allWelds > 0 then
+        for _, weld in ipairs(allWelds) do
+            if weld:IsA("Weld") then
+                weld.C0 = weld.C0 * cfOffset
+            end
+        end
     end
     
     self:UpdateCoordDisplay()
@@ -409,11 +400,13 @@ function ItemAdjuster:ApplyRotation(rx, ry, rz)
     
     local rotCF = CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
     
-    -- Only adjust weld C0 rotation
-    if targetWeld and targetWeld:IsA("Weld") then
-        targetWeld.C0 = targetWeld.C0 * rotCF
-    elseif targetWeld and targetWeld:IsA("WeldConstraint") then
-        warn("[ItemAdjuster] WeldConstraint detected - cannot adjust rotation")
+    -- Adjust ALL welds
+    if allWelds and #allWelds > 0 then
+        for _, weld in ipairs(allWelds) do
+            if weld:IsA("Weld") then
+                weld.C0 = weld.C0 * rotCF
+            end
+        end
     end
     
     self:UpdateCoordDisplay()
