@@ -398,8 +398,13 @@ function InventoryUI:ShowDetail(itemData, slot)
 end
 
 function InventoryUI:RefreshItems()
-    if not scrollFrame or not playerData then return end
+    if not scrollFrame or not playerData then 
+        warn("[InventoryUI] RefreshItems: scrollFrame or playerData is nil")
+        return 
+    end
     local GameData = require(ReplicatedStorage:WaitForChild("GameData"))
+    
+    print("[InventoryUI] RefreshItems called, inventory:", playerData.inventory and #playerData.inventory or "nil")
     
     -- Clear old items
     for _, child in ipairs(scrollFrame:GetChildren()) do
@@ -431,9 +436,13 @@ function InventoryUI:RefreshItems()
                 elseif currentTab == "equipment" and itemType == "equipment" then
                     table.insert(items, {slot = slot, data = itemData})
                 end
+            else
+                warn("[InventoryUI] Item not found in GameData:", slot.itemId)
             end
         end
     end
+    
+    print("[InventoryUI] Filtered items for tab '" .. currentTab .. "':", #items)
     
     -- Sort: newest first
     for i = 1, math.floor(#items / 2) do
@@ -516,6 +525,8 @@ end
 
 function InventoryUI:Update(data)
     playerData = data
+    
+    print("[InventoryUI] Update received, inventory count:", data.inventory and #data.inventory or "nil")
     
     local goldLabel = frame and frame:FindFirstChild("GoldLabel", true)
     if goldLabel then
