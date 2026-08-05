@@ -120,22 +120,25 @@ function AdminSystem:GiveItem(player, itemId, quantity, targetPlayerName)
         return
     end
     
-    -- Tambahkan ke inventory
-    local added = false
-    if itemData.stackable then
-        for i, slot in ipairs(pData.inventory) do
-            if slot.itemId == itemId then
-                slot.quantity = (slot.quantity or 1) + quantity
-                added = true
-                break
-            end
+    -- Tambahkan ke inventory (format: {itemId = "xxx", count = N})
+    local maxStack = itemData.maxStack or 99
+    local remaining = quantity
+    
+    -- Cari stack yang sudah ada
+    for i, slot in ipairs(pData.inventory) do
+        if remaining <= 0 then break end
+        if slot.itemId == itemId and (slot.count or 1) < maxStack then
+            local canAdd = math.min(remaining, maxStack - (slot.count or 1))
+            slot.count = (slot.count or 1) + canAdd
+            remaining = remaining - canAdd
         end
     end
     
-    if not added then
-        for i = 1, quantity do
-            table.insert(pData.inventory, {itemId = itemId, quantity = 1})
-        end
+    -- Buat stack baru sisa
+    while remaining > 0 do
+        local stackSize = math.min(remaining, maxStack)
+        table.insert(pData.inventory, {itemId = itemId, count = stackSize})
+        remaining = remaining - stackSize
     end
     
     -- Update client
@@ -292,7 +295,7 @@ function AdminSystem:GiveAllItems(player)
     local count = 0
     for id, data in pairs(GameData.Items or {}) do
         if data.type == "equipment" then
-            table.insert(pData.inventory, {itemId = id, quantity = 1})
+            table.insert(pData.inventory, {itemId = id, count = 1})
             count = count + 1
         end
     end
