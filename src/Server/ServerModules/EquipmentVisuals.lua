@@ -114,6 +114,31 @@ function EquipmentVisuals:ClearVisuals(character)
     end
 end
 
+-- Debug: tampilkan BillboardGui di weapon yang di-equip
+local function addDebugGui(part, itemId)
+    local existing = part:FindFirstChild("DebugGui")
+    if existing then existing:Destroy() end
+    
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "DebugGui"
+    gui.Size = UDim2.new(0, 200, 0, 80)
+    gui.StudsOffset = Vector3.new(0, 2, 0)
+    gui.AlwaysOnTop = true
+    gui.Parent = part
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "Info"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    label.BackgroundTransparency = 0.5
+    label.TextColor3 = Color3.fromRGB(255, 255, 0)
+    label.TextScaled = true
+    label.Text = itemId .. "\nSize: " .. tostring(part.Size)
+    label.Parent = gui
+end
+
+local DEBUG_MODE = false  -- Set true untuk tampilkan info di weapon
+
 -- WEAPON: Weld langsung ke tangan
 local function applyWeapon(character, itemId, v, bodyPart, rigType)
     local templateName = v.template or itemId

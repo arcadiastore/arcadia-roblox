@@ -218,7 +218,8 @@ Items["wooden_sword"] = {
     visual = {
         template = "wooden_sword",
         scale = 1,
-        offset = CFrame.new(1.5, -0.5, 0) * CFrame.Angles(0, 0, math.rad(-90)),
+        -- ADJUST: X=kiri/kanan Y=atas/bawah Z=depan/belakang
+        offset = CFrame.new(0.8, -0.3, 0) * CFrame.Angles(0, 0, math.rad(-90)),
         attachTo = "Right Arm",
     },
     icon = "rbxassetid://136149295735575",
@@ -239,7 +240,8 @@ Items["iron_sword"] = {
     visual = {
         template = "iron_sword",
         scale = 1,
-        offset = CFrame.new(1.5, -0.5, 0) * CFrame.Angles(0, 0, math.rad(-90)),
+        -- ADJUST: X=kiri/kanan Y=atas/bawah Z=depan/belakang
+        offset = CFrame.new(0.5, -0.5, 0) * CFrame.Angles(0, 0, math.rad(-90)),
         attachTo = "Right Arm",
     },
     icon = "rbxassetid://0",
