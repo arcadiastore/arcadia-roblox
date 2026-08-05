@@ -2,12 +2,10 @@
     AdminPanel.lua
     Client-side admin panel UI
     
-    Fitur:
-    - Input GM code untuk jadi GameMaster
-    - Give item (search + select)
-    - Give gold
-    - Heal / Teleport / Set Level
-    - List semua items
+    Keamanan:
+    - Panel hanya bisa dibuka jika server konfirmasi admin status
+    - Tekan F7 -> client minta check_admin -> server validasi -> buka panel
+    - Item list di-load saat panel dibuka pertama kali
 ]]
 
 local AdminPanel = {}
@@ -19,15 +17,16 @@ local player = Players.LocalPlayer
 local AdminEvent = nil
 local gui = nil
 local isOpen = false
-local allItems = {}  -- Cache item list
+local isAdmin = false  -- Server-confirmed admin status
+local allItems = {}    -- Cache item list
+local itemsLoaded = false
 
 -- Colors
 local BG_COLOR = Color3.fromRGB(30, 30, 40)
 local PANEL_COLOR = Color3.fromRGB(40, 40, 55)
-local ACCENT_COLOR = Color3.fromRGB(255, 215, 0)  -- Gold
+local ACCENT_COLOR = Color3.fromRGB(255, 215, 0)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local BTN_COLOR = Color3.fromRGB(60, 60, 80)
-local BTN_HOVER = Color3.fromRGB(80, 80, 110)
 local SUCCESS_COLOR = Color3.fromRGB(80, 255, 80)
 local ERROR_COLOR = Color3.fromRGB(255, 80, 80)
 
@@ -44,8 +43,44 @@ function AdminPanel:Create(parentGui)
         return
     end
     
-    print("[AdminPanel] AdminEvent found, building UI...")
+    -- Build UI (hidden by default)
+    self:BuildUI(parentGui)
     
+    -- Listen for server responses
+    AdminEvent.OnClientEvent:Connect(function(action, data)
+        if action == "admin_status" then
+            if data.is_admin then
+                isAdmin = true
+                if gui then
+                    gui.Enabled = true
+                    isOpen = true
+                    -- Load item list on first open
+                    if not itemsLoaded then
+                        AdminEvent:FireServer("list_items", {})
+                    end
+                end
+            else
+                warn("[AdminPanel] You are not an admin!")
+            end
+            
+        elseif action == "success" then
+            self:SetStatus(data.message or "Success!", SUCCESS_COLOR)
+            
+        elseif action == "error" then
+            self:SetStatus(data.message or "Error!", ERROR_COLOR)
+            
+        elseif action == "item_list" then
+            allItems = data.items or {}
+            itemsLoaded = true
+            self:SetStatus("Loaded " .. #allItems .. " items", SUCCESS_COLOR)
+            self:RefreshItemList()
+        end
+    end)
+    
+    print("[AdminPanel] Created! Press F7 to open (admin only).")
+end
+
+function AdminPanel:BuildUI(parentGui)
     -- Main GUI
     gui = Instance.new("ScreenGui")
     gui.Name = "AdminPanelGui"
@@ -79,7 +114,6 @@ function AdminPanel:Create(parentGui)
     titleCorner.Parent = titleBar
     
     local title = Instance.new("TextLabel")
-    title.Name = "Title"
     title.Size = UDim2.new(1, -80, 1, 0)
     title.Position = UDim2.new(0, 15, 0, 0)
     title.BackgroundTransparency = 1
@@ -92,7 +126,6 @@ function AdminPanel:Create(parentGui)
     
     -- Close button
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseBtn"
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -35, 0, 5)
     closeBtn.BackgroundColor3 = ERROR_COLOR
@@ -161,22 +194,20 @@ function AdminPanel:Create(parentGui)
     statusLabel.TextXAlignment = Enum.TextXAlignment.Left
     statusLabel.Parent = statusFrame
     
-    -- Build tabs
+    -- Build tab contents
     self:BuildGiveItemTab(content)
     self:BuildToolsTab(content)
-    self:BuildGMCodeTab(content)
     
     -- Create tab buttons
     local tabs = {
         {name = "Give Item", tab = "GiveItem"},
         {name = "Tools", tab = "Tools"},
-        {name = "GM Code", tab = "GMCode"},
     }
     
     for _, tabInfo in ipairs(tabs) do
         local btn = Instance.new("TextButton")
         btn.Name = tabInfo.tab .. "Tab"
-        btn.Size = UDim2.new(0, 100, 1, 0)
+        btn.Size = UDim2.new(0, 120, 1, 0)
         btn.BackgroundColor3 = BTN_COLOR
         btn.Text = tabInfo.name
         btn.TextColor3 = TEXT_COLOR
@@ -193,29 +224,8 @@ function AdminPanel:Create(parentGui)
         end)
     end
     
-    -- Listen for server responses
-    AdminEvent.OnClientEvent:Connect(function(action, data)
-        if action == "gm_granted" then
-            self:SetStatus("GameMaster granted! Kamu sekarang GM.", SUCCESS_COLOR)
-            gui.Enabled = true
-            isOpen = true
-            
-        elseif action == "success" then
-            self:SetStatus(data.message or "Success!", SUCCESS_COLOR)
-            
-        elseif action == "error" then
-            self:SetStatus(data.message or "Error!", ERROR_COLOR)
-            
-        elseif action == "item_list" then
-            allItems = data.items or {}
-            self:SetStatus("Loaded " .. #allItems .. " items", SUCCESS_COLOR)
-        end
-    end)
-    
-    -- Request item list on open
-    self:RequestItemList()
-    
-    print("[AdminPanel] Created!")
+    -- Show first tab by default
+    self:ShowTab("GiveItem", content, tabFrame)
 end
 
 function AdminPanel:RequestItemList()
@@ -238,14 +248,12 @@ function AdminPanel:SetStatus(text, color)
 end
 
 function AdminPanel:ShowTab(tabName, content, tabFrame)
-    -- Hide all tab content
     for _, child in ipairs(content:GetChildren()) do
         if child:IsA("Frame") and child:GetAttribute("Tab") then
             child.Visible = (child:GetAttribute("Tab") == tabName)
         end
     end
     
-    -- Highlight active tab
     for _, child in ipairs(tabFrame:GetChildren()) do
         if child:IsA("TextButton") then
             if child.Name == tabName .. "Tab" then
@@ -259,6 +267,62 @@ function AdminPanel:ShowTab(tabName, content, tabFrame)
     end
 end
 
+function AdminPanel:RefreshItemList()
+    local content = gui and gui:FindFirstChild("MainFrame") and gui.MainFrame:FindFirstChild("Content")
+    if not content then return end
+    local giveTab = content:FindFirstChild("GiveItemContent")
+    if not giveTab then return end
+    local listFrame = giveTab:FindFirstChild("ItemList")
+    if not listFrame then return end
+    
+    -- Clear old items
+    for _, child in ipairs(listFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    -- Populate
+    local count = 0
+    for _, item in ipairs(allItems) do
+        if count < 100 then
+            count = count + 1
+            local btn = Instance.new("TextButton")
+            btn.Name = item.id
+            btn.Size = UDim2.new(1, -10, 0, 25)
+            btn.BackgroundColor3 = BTN_COLOR
+            btn.Text = "  " .. item.id .. "  (" .. (item.name or "?") .. ") [" .. (item.type or "?") .. "]"
+            btn.TextColor3 = TEXT_COLOR
+            btn.TextSize = 12
+            btn.Font = Enum.Font.Gotham
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.Parent = listFrame
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = btn
+            
+            btn.MouseButton1Click:Connect(function()
+                -- Store selected item
+                giveTab:SetAttribute("SelectedItemId", item.id)
+                local selectedLabel = giveTab:FindFirstChild("SelectedLabel")
+                if selectedLabel then
+                    selectedLabel.Text = "Selected: " .. item.id .. " (" .. (item.name or "?") .. ")"
+                end
+                -- Highlight
+                for _, b in ipairs(listFrame:GetChildren()) do
+                    if b:IsA("TextButton") then
+                        b.BackgroundColor3 = BTN_COLOR
+                        b.TextColor3 = TEXT_COLOR
+                    end
+                end
+                btn.BackgroundColor3 = ACCENT_COLOR
+                btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+            end)
+        end
+    end
+    
+    listFrame.CanvasSize = UDim2.new(0, 0, 0, count * 27)
+end
+
 function AdminPanel:BuildGiveItemTab(parent)
     local tab = Instance.new("Frame")
     tab.Name = "GiveItemContent"
@@ -266,6 +330,7 @@ function AdminPanel:BuildGiveItemTab(parent)
     tab.Position = UDim2.new(0, 5, 0, 5)
     tab.BackgroundTransparency = 1
     tab:SetAttribute("Tab", "GiveItem")
+    tab:SetAttribute("SelectedItemId", "")
     tab.Visible = true
     tab.Parent = parent
     
@@ -358,7 +423,7 @@ function AdminPanel:BuildGiveItemTab(parent)
     
     -- Target player
     local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    targetLabel.Size = UDim2.new(0.35, 0, 0, 20)
     targetLabel.Position = UDim2.new(0, 0, 0, 330)
     targetLabel.BackgroundTransparency = 1
     targetLabel.Text = "Target (kosong=self):"
@@ -370,8 +435,8 @@ function AdminPanel:BuildGiveItemTab(parent)
     
     local targetBox = Instance.new("TextBox")
     targetBox.Name = "TargetBox"
-    targetBox.Size = UDim2.new(0.65, 0, 0, 30)
-    targetBox.Position = UDim2.new(0.35, 0, 0, 327)
+    targetBox.Size = UDim2.new(0.6, 0, 0, 30)
+    targetBox.Position = UDim2.new(0.4, 0, 0, 327)
     targetBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     targetBox.Text = ""
     targetBox.PlaceholderText = "Player name (optional)"
@@ -386,7 +451,6 @@ function AdminPanel:BuildGiveItemTab(parent)
     
     -- Give button
     local giveBtn = Instance.new("TextButton")
-    giveBtn.Name = "GiveBtn"
     giveBtn.Size = UDim2.new(1, 0, 0, 40)
     giveBtn.Position = UDim2.new(0, 0, 0, 370)
     giveBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
@@ -400,9 +464,27 @@ function AdminPanel:BuildGiveItemTab(parent)
     giveBtnCorner.CornerRadius = UDim.new(0, 8)
     giveBtnCorner.Parent = giveBtn
     
+    giveBtn.MouseButton1Click:Connect(function()
+        local selectedId = tab:GetAttribute("SelectedItemId")
+        if not selectedId or selectedId == "" then
+            self:SetStatus("Pilih item dulu!", ERROR_COLOR)
+            return
+        end
+        
+        local qty = tonumber(qtyBox.Text) or 1
+        local target = targetBox.Text
+        
+        AdminEvent:FireServer("give_item", {
+            item_id = selectedId,
+            quantity = qty,
+            target = target ~= "" and target or nil,
+        })
+        
+        self:SetStatus("Giving " .. qty .. "x " .. selectedId .. "...")
+    end)
+    
     -- Give All button
     local giveAllBtn = Instance.new("TextButton")
-    giveAllBtn.Name = "GiveAllBtn"
     giveAllBtn.Size = UDim2.new(1, 0, 0, 35)
     giveAllBtn.Position = UDim2.new(0, 0, 0, 418)
     giveAllBtn.BackgroundColor3 = Color3.fromRGB(180, 120, 50)
@@ -416,91 +498,22 @@ function AdminPanel:BuildGiveItemTab(parent)
     giveAllCorner.CornerRadius = UDim.new(0, 8)
     giveAllCorner.Parent = giveAllBtn
     
-    -- State
-    local selectedItemId = nil
-    
-    -- Function to populate list
-    local function populateList(filter)
-        for _, child in ipairs(listFrame:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        
-        filter = filter and filter:lower() or ""
-        local count = 0
-        
-        for _, item in ipairs(allItems) do
-            local match = filter == "" 
-                or item.id:lower():find(filter) 
-                or (item.name and item.name:lower():find(filter))
-            
-            if match and count < 50 then
-                count = count + 1
-                local btn = Instance.new("TextButton")
-                btn.Name = item.id
-                btn.Size = UDim2.new(1, -10, 0, 25)
-                btn.BackgroundColor3 = BTN_COLOR
-                btn.Text = item.id .. " (" .. (item.name or "?") .. ")"
-                btn.TextColor3 = TEXT_COLOR
-                btn.TextSize = 12
-                btn.Font = Enum.Font.Gotham
-                btn.TextXAlignment = Enum.TextXAlignment.Left
-                btn.Parent = listFrame
-                
-                local btnCorner = Instance.new("UICorner")
-                btnCorner.CornerRadius = UDim.new(0, 4)
-                btnCorner.Parent = btn
-                
-                btn.MouseButton1Click:Connect(function()
-                    selectedItemId = item.id
-                    selectedLabel.Text = "Selected: " .. item.id .. " (" .. (item.name or "?") .. ")"
-                    -- Highlight
-                    for _, b in ipairs(listFrame:GetChildren()) do
-                        if b:IsA("TextButton") then
-                            b.BackgroundColor3 = BTN_COLOR
-                        end
-                    end
-                    btn.BackgroundColor3 = ACCENT_COLOR
-                    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-                end)
-            end
-        end
-        
-        listFrame.CanvasSize = UDim2.new(0, 0, 0, count * 27)
-    end
-    
-    -- Search box filter
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        populateList(searchBox.Text)
-    end)
-    
-    -- Give button
-    giveBtn.MouseButton1Click:Connect(function()
-        if not selectedItemId then
-            self:SetStatus("Pilih item dulu!", ERROR_COLOR)
-            return
-        end
-        
-        local qty = tonumber(qtyBox.Text) or 1
-        local target = targetBox.Text
-        
-        AdminEvent:FireServer("give_item", {
-            item_id = selectedItemId,
-            quantity = qty,
-            target = target ~= "" and target or nil,
-        })
-        
-        self:SetStatus("Giving " .. qty .. "x " .. selectedItemId .. "...")
-    end)
-    
-    -- Give All button
     giveAllBtn.MouseButton1Click:Connect(function()
         AdminEvent:FireServer("give_all_items", {})
         self:SetStatus("Giving all equipment...")
     end)
     
-    -- Initial populate
-    task.delay(1, function()
-        populateList("")
+    -- Search filter
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local filter = searchBox.Text:lower()
+        for _, child in ipairs(listFrame:GetChildren()) do
+            if child:IsA("TextButton") then
+                local match = filter == "" 
+                    or child.Name:lower():find(filter) 
+                    or child.Text:lower():find(filter)
+                child.Visible = match
+            end
+        end
     end)
 end
 
@@ -515,6 +528,39 @@ function AdminPanel:BuildToolsTab(parent)
     tab.Parent = parent
     
     local yPos = 0
+    local function makeLabel(text)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 0, 20)
+        label.Position = UDim2.new(0, 0, 0, yPos)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = ACCENT_COLOR
+        label.TextSize = 14
+        label.Font = Enum.Font.GothamBold
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = tab
+        yPos = yPos + 22
+    end
+    
+    local function makeTextBox(name, placeholder, default)
+        local box = Instance.new("TextBox")
+        box.Name = name
+        box.Size = UDim2.new(1, 0, 0, 30)
+        box.Position = UDim2.new(0, 0, 0, yPos)
+        box.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        box.Text = default or ""
+        box.PlaceholderText = placeholder or ""
+        box.TextColor3 = TEXT_COLOR
+        box.TextSize = 14
+        box.Font = Enum.Font.Gotham
+        box.Parent = tab
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 6)
+        c.Parent = box
+        yPos = yPos + 35
+        return box
+    end
+    
     local function makeButton(text, color, callback)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 40)
@@ -525,119 +571,41 @@ function AdminPanel:BuildToolsTab(parent)
         btn.TextSize = 16
         btn.Font = Enum.Font.GothamBold
         btn.Parent = tab
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = btn
-        
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 8)
+        c.Parent = btn
         btn.MouseButton1Click:Connect(callback)
         yPos = yPos + 48
     end
     
-    -- Target player
-    local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(1, 0, 0, 20)
-    targetLabel.BackgroundTransparency = 1
-    targetLabel.Text = "Target Player (kosong=self):"
-    targetLabel.TextColor3 = ACCENT_COLOR
-    targetLabel.TextSize = 14
-    targetLabel.Font = Enum.Font.GothamBold
-    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    targetLabel.Parent = tab
-    yPos = yPos + 25
+    makeLabel("Target Player (kosong=self):")
+    local targetBox = makeTextBox("TargetBox", "Player name", "")
     
-    local targetBox = Instance.new("TextBox")
-    targetBox.Name = "TargetBox"
-    targetBox.Size = UDim2.new(1, 0, 0, 30)
-    targetBox.Position = UDim2.new(0, 0, 0, yPos)
-    targetBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    targetBox.Text = ""
-    targetBox.PlaceholderText = "Player name"
-    targetBox.TextColor3 = TEXT_COLOR
-    targetBox.TextSize = 14
-    targetBox.Font = Enum.Font.Gotham
-    targetBox.Parent = tab
+    makeLabel("Gold Amount:")
+    local goldBox = makeTextBox("GoldBox", "Amount", "1000")
     
-    local targetCorner = Instance.new("UICorner")
-    targetCorner.CornerRadius = UDim.new(0, 6)
-    targetCorner.Parent = targetBox
-    yPos = yPos + 40
+    makeLabel("Level:")
+    local levelBox = makeTextBox("LevelBox", "Level", "50")
     
-    -- Gold amount
-    local goldLabel = Instance.new("TextLabel")
-    goldLabel.Size = UDim2.new(0.4, 0, 0, 20)
-    goldLabel.BackgroundTransparency = 1
-    goldLabel.Text = "Gold Amount:"
-    goldLabel.TextColor3 = TEXT_COLOR
-    goldLabel.TextSize = 14
-    goldLabel.Font = Enum.Font.Gotham
-    goldLabel.TextXAlignment = Enum.TextXAlignment.Left
-    goldLabel.Parent = tab
+    yPos = yPos + 5
     
-    local goldBox = Instance.new("TextBox")
-    goldBox.Name = "GoldBox"
-    goldBox.Size = UDim2.new(0.55, 0, 0, 30)
-    goldBox.Position = UDim2.new(0.45, 0, 0, yPos)
-    goldBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    goldBox.Text = "1000"
-    goldBox.TextColor3 = TEXT_COLOR
-    goldBox.TextSize = 14
-    goldBox.Font = Enum.Font.Gotham
-    goldBox.Parent = tab
-    
-    local goldCorner = Instance.new("UICorner")
-    goldCorner.CornerRadius = UDim.new(0, 6)
-    goldCorner.Parent = goldBox
-    yPos = yPos + 40
-    
-    -- Level
-    local levelLabel = Instance.new("TextLabel")
-    levelLabel.Size = UDim2.new(0.4, 0, 0, 20)
-    levelLabel.BackgroundTransparency = 1
-    levelLabel.Text = "Level:"
-    levelLabel.TextColor3 = TEXT_COLOR
-    levelLabel.TextSize = 14
-    levelLabel.Font = Enum.Font.Gotham
-    levelLabel.TextXAlignment = Enum.TextXAlignment.Left
-    levelLabel.Parent = tab
-    
-    local levelBox = Instance.new("TextBox")
-    levelBox.Name = "LevelBox"
-    levelBox.Size = UDim2.new(0.55, 0, 0, 30)
-    levelBox.Position = UDim2.new(0.45, 0, 0, yPos)
-    levelBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    levelBox.Text = "50"
-    levelBox.TextColor3 = TEXT_COLOR
-    levelBox.TextSize = 14
-    levelBox.Font = Enum.Font.Gotham
-    levelBox.Parent = tab
-    
-    local levelCorner = Instance.new("UICorner")
-    levelCorner.CornerRadius = UDim.new(0, 6)
-    levelCorner.Parent = levelBox
-    yPos = yPos + 45
-    
-    -- Buttons
     makeButton("HEAL", Color3.fromRGB(50, 180, 50), function()
-        AdminEvent:FireServer("heal", {target = targetBox.Text ~= "" and targetBox.Text or nil})
+        local target = targetBox.Text ~= "" and targetBox.Text or nil
+        AdminEvent:FireServer("heal", {target = target})
         self:SetStatus("Healing...")
     end)
     
     makeButton("GIVE GOLD", Color3.fromRGB(255, 215, 0), function()
         local amount = tonumber(goldBox.Text) or 1000
-        AdminEvent:FireServer("give_gold", {
-            amount = amount,
-            target = targetBox.Text ~= "" and targetBox.Text or nil,
-        })
+        local target = targetBox.Text ~= "" and targetBox.Text or nil
+        AdminEvent:FireServer("give_gold", {amount = amount, target = target})
         self:SetStatus("Giving " .. amount .. " gold...")
     end)
     
     makeButton("SET LEVEL", Color3.fromRGB(100, 100, 255), function()
         local level = tonumber(levelBox.Text) or 50
-        AdminEvent:FireServer("set_level", {
-            level = level,
-            target = targetBox.Text ~= "" and targetBox.Text or nil,
-        })
+        local target = targetBox.Text ~= "" and targetBox.Text or nil
+        AdminEvent:FireServer("set_level", {level = level, target = target})
         self:SetStatus("Setting level to " .. level .. "...")
     end)
     
@@ -651,76 +619,15 @@ function AdminPanel:BuildToolsTab(parent)
     end)
 end
 
-function AdminPanel:BuildGMCodeTab(parent)
-    local tab = Instance.new("Frame")
-    tab.Name = "GMCodeContent"
-    tab.Size = UDim2.new(1, -10, 1, -10)
-    tab.Position = UDim2.new(0, 5, 0, 5)
-    tab.BackgroundTransparency = 1
-    tab:SetAttribute("Tab", "GMCode")
-    tab.Visible = false
-    tab.Parent = parent
-    
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Size = UDim2.new(1, 0, 0, 60)
-    infoLabel.BackgroundTransparency = 1
-    infoLabel.Text = "Masukkan GM Code untuk mendapatkan akses GameMaster.\n\nGameMaster bisa pakai SEMUA item tanpa batasan job."
-    infoLabel.TextColor3 = TEXT_COLOR
-    infoLabel.TextSize = 14
-    infoLabel.Font = Enum.Font.Gotham
-    infoLabel.TextWrapped = true
-    infoLabel.TextYAlignment = Enum.TextYAlignment.Top
-    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-    infoLabel.Parent = tab
-    
-    local codeBox = Instance.new("TextBox")
-    codeBox.Name = "CodeBox"
-    codeBox.Size = UDim2.new(1, 0, 0, 35)
-    codeBox.Position = UDim2.new(0, 0, 0, 70)
-    codeBox.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    codeBox.Text = ""
-    codeBox.PlaceholderText = "Masukkan GM Code..."
-    codeBox.TextColor3 = ACCENT_COLOR
-    codeBox.TextSize = 16
-    codeBox.Font = Enum.Font.GothamBold
-    codeBox.ClearTextOnFocus = true
-    codeBox.Parent = tab
-    
-    local codeCorner = Instance.new("UICorner")
-    codeCorner.CornerRadius = UDim.new(0, 8)
-    codeCorner.Parent = codeBox
-    
-    local redeemBtn = Instance.new("TextButton")
-    redeemBtn.Size = UDim2.new(1, 0, 0, 40)
-    redeemBtn.Position = UDim2.new(0, 0, 0, 115)
-    redeemBtn.BackgroundColor3 = ACCENT_COLOR
-    redeemBtn.Text = "REDEEM CODE"
-    redeemBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    redeemBtn.TextSize = 18
-    redeemBtn.Font = Enum.Font.GothamBold
-    redeemBtn.Parent = tab
-    
-    local redeemCorner = Instance.new("UICorner")
-    redeemCorner.CornerRadius = UDim.new(0, 8)
-    redeemCorner.Parent = redeemBtn
-    
-    redeemBtn.MouseButton1Click:Connect(function()
-        local code = codeBox.Text
-        if code == "" then
-            self:SetStatus("Masukkan kode!", ERROR_COLOR)
-            return
-        end
-        AdminEvent:FireServer("redeem_code", {code = code})
-        self:SetStatus("Checking code...")
-    end)
-end
-
 function AdminPanel:Open()
-    if gui then
-        gui.Enabled = true
-        isOpen = true
-        self:RequestItemList()
+    if not AdminEvent then
+        warn("[AdminPanel] Not initialized!")
+        return
     end
+    
+    -- Request admin check from server
+    AdminEvent:FireServer("check_admin", {})
+    self:SetStatus("Checking admin status...")
 end
 
 function AdminPanel:Close()
@@ -731,10 +638,11 @@ function AdminPanel:Close()
 end
 
 function AdminPanel:Toggle()
-    if not gui then
-        warn("[AdminPanel] GUI not created yet!")
+    if not AdminEvent then
+        warn("[AdminPanel] Not initialized!")
         return
     end
+    
     if isOpen then
         self:Close()
     else

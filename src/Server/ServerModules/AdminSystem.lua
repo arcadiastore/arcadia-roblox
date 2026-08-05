@@ -2,120 +2,128 @@
     AdminSystem.lua
     Server-side admin commands
     
-    Fitur:
-    - GM Code redeem (ubah job ke GameMaster)
-    - Give item ke diri/sendiri/semua
-    - Use semua item tanpa batasan job
-    - Teleport, heal, kill, dll
+    Keamanan:
+    - Hanya UserId dalam whitelist yang bisa akses
+    - Semua validasi di SERVER, client hanya UI
+    - GM Code dihapus, diganti UserId whitelist
 ]]
 
 local GameData = require(game.ReplicatedStorage:WaitForChild("GameData"))
+local Players = game:GetService("Players")
 
 local AdminSystem = {}
 
--- Config
-local GM_CODE = "GM2024"  -- Ubah kode ini!
-local GM_JOB = "GameMaster"
+-- ============================================
+-- ADMIN WHITELIST (UserId)
+-- Tambahkan UserId admin di sini
+-- ============================================
+local ADMIN_IDS = {
+    123456789,  -- Contoh, ganti dengan UserId kamu
+    -- Tambah UserId lain di sini
+}
 
--- Track GM players
-local GMPlayers = {}  -- [player] = true
-
--- Helper: cek apakah player GM
-local function isGM(player)
-    return GMPlayers[player] == true
+-- Helper: cek apakah player admin
+local function isAdmin(player)
+    for _, id in ipairs(ADMIN_IDS) do
+        if player.UserId == id then
+            return true
+        end
+    end
+    return false
 end
 
 function AdminSystem:Init(events)
     self.events = events
+    self.PlayerData = nil  -- Lazy load
     
     -- Handle AdminEvent
     events.AdminEvent.OnServerEvent:Connect(function(player, action, data)
-        -- Cek apakah player GM
-        if not GMPlayers[player] then
-            -- Cek kode GM
-            if action == "redeem_code" and data.code == GM_CODE then
-                GMPlayers[player] = true
-                
-                -- Set job ke GameMaster
-                local pData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData):Get(player)
-                if pData then
-                    pData.job = GM_JOB
-                    -- Beri semua skill
-                    pData.learnedSkills = {}
-                    for skillId, _ in pairs(GameData.Skills or {}) do
-                        table.insert(pData.learnedSkills, skillId)
-                    end
-                    print("[AdminSystem] " .. player.Name .. " redeemed GM code -> " .. GM_JOB)
-                end
-                
-                events.AdminEvent:FireClient(player, "gm_granted", {})
-                return
-            end
-            
-            -- Bukan GM, tolak
-            events.AdminEvent:FireClient(player, "error", {message = "Kamu bukan GameMaster!"})
+        -- Validasi admin di SERVER
+        if not isAdmin(player) then
+            warn("[AdminSystem] Non-admin " .. player.Name .. " tried to use: " .. tostring(action))
+            events.AdminEvent:FireClient(player, "error", {message = "Akses ditolak!"})
             return
         end
         
+        -- Validasi data
+        data = data or {}
+        
         -- GM Commands
         if action == "give_item" then
-            self:GiveItem(player, data.item_id, data.quantity or 1, data.target)
+            if data.item_id and data.item_id ~= "" then
+                self:GiveItem(player, data.item_id, data.quantity or 1, data.target)
+            else
+                events.AdminEvent:FireClient(player, "error", {message = "Item ID kosong!"})
+            end
             
         elseif action == "give_gold" then
-            self:GiveGold(player, data.amount, data.target)
+            self:GiveGold(player, tonumber(data.amount) or 0, data.target)
             
         elseif action == "heal" then
             self:Heal(player, data.target)
             
         elseif action == "teleport" then
-            self:Teleport(player, data.target)
+            if data.target and data.target ~= "" then
+                self:Teleport(player, data.target)
+            else
+                events.AdminEvent:FireClient(player, "error", {message = "Isi nama target!"})
+            end
             
         elseif action == "list_items" then
             self:ListItems(player)
             
         elseif action == "set_level" then
-            self:SetLevel(player, data.level, data.target)
+            self:SetLevel(player, tonumber(data.level) or 1, data.target)
             
         elseif action == "give_all_items" then
             self:GiveAllItems(player)
+            
+        elseif action == "check_admin" then
+            -- Client minta konfirmasi admin status
+            events.AdminEvent:FireClient(player, "admin_status", {is_admin = true})
         end
     end)
     
-    -- Track disconnect
-    game.Players.PlayerRemoving:Connect(function(player)
-        GMPlayers[player] = nil
-    end)
-    
-    print("[AdminSystem] Initialized!")
+    print("[AdminSystem] Initialized! Admin count: " .. #ADMIN_IDS)
+end
+
+-- Lazy load PlayerData
+function AdminSystem:GetPlayerData()
+    if not self.PlayerData then
+        self.PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    end
+    return self.PlayerData
 end
 
 -- Give item
 function AdminSystem:GiveItem(player, itemId, quantity, targetPlayerName)
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    local PlayerData = self:GetPlayerData()
     
     local target = player
     if targetPlayerName and targetPlayerName ~= "" then
-        target = game.Players:FindFirstChild(targetPlayerName)
+        target = Players:FindFirstChild(targetPlayerName)
     end
     
     if not target then
-        self.events.AdminEvent:FireClient(player, "error", {message = "Player tidak ditemukan!"})
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player '" .. tostring(targetPlayerName) .. "' tidak ditemukan!"})
         return
     end
     
     local itemData = GameData:GetItem(itemId)
     if not itemData then
-        self.events.AdminEvent:FireClient(player, "error", {message = "Item '" .. itemId .. "' tidak ada!"})
+        self.events.AdminEvent:FireClient(player, "error", {message = "Item '" .. itemId .. "' tidak ada di GameData!"})
         return
     end
     
     local pData = PlayerData:Get(target)
-    if not pData then return end
+    if not pData then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Data player tidak ditemukan!"})
+        return
+    end
     
     -- Tambahkan ke inventory
     local added = false
     if itemData.stackable then
-        -- Cari stack yang sudah ada
         for i, slot in ipairs(pData.inventory) do
             if slot.id == itemId then
                 slot.quantity = (slot.quantity or 1) + quantity
@@ -142,14 +150,22 @@ end
 
 -- Give gold
 function AdminSystem:GiveGold(player, amount, targetPlayerName)
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    if amount <= 0 then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Jumlah harus > 0!"})
+        return
+    end
+    
+    local PlayerData = self:GetPlayerData()
     
     local target = player
     if targetPlayerName and targetPlayerName ~= "" then
-        target = game.Players:FindFirstChild(targetPlayerName)
+        target = Players:FindFirstChild(targetPlayerName)
     end
     
-    if not target then return end
+    if not target then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player tidak ditemukan!"})
+        return
+    end
     
     local pData = PlayerData:Get(target)
     if not pData then return end
@@ -165,18 +181,23 @@ end
 
 -- Heal
 function AdminSystem:Heal(player, targetPlayerName)
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    local PlayerData = self:GetPlayerData()
     
     local target = player
     if targetPlayerName and targetPlayerName ~= "" then
-        target = game.Players:FindFirstChild(targetPlayerName)
+        target = Players:FindFirstChild(targetPlayerName)
     end
     
-    if not target or not target.Character then return end
+    if not target then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player tidak ditemukan!"})
+        return
+    end
     
-    local humanoid = target.Character:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.Health = humanoid.MaxHealth
+    if target.Character then
+        local humanoid = target.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Health = humanoid.MaxHealth
+        end
     end
     
     local pData = PlayerData:Get(target)
@@ -187,14 +208,21 @@ function AdminSystem:Heal(player, targetPlayerName)
     end
     
     print("[AdminSystem] " .. player.Name .. " healed " .. target.Name)
+    self.events.AdminEvent:FireClient(player, "success", {message = "Healed " .. target.Name})
 end
 
 -- Teleport to player
 function AdminSystem:Teleport(player, targetPlayerName)
-    if not targetPlayerName or targetPlayerName == "" then return end
+    local target = Players:FindFirstChild(targetPlayerName)
+    if not target then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player '" .. targetPlayerName .. "' tidak ditemukan!"})
+        return
+    end
     
-    local target = game.Players:FindFirstChild(targetPlayerName)
-    if not target or not target.Character then return end
+    if not target.Character then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player belum spawn!"})
+        return
+    end
     
     local targetPos = target.Character:GetPivot()
     if player.Character then
@@ -202,14 +230,23 @@ function AdminSystem:Teleport(player, targetPlayerName)
     end
     
     print("[AdminSystem] " .. player.Name .. " teleported to " .. target.Name)
+    self.events.AdminEvent:FireClient(player, "success", {message = "Teleported to " .. target.Name})
 end
 
 -- List all items
 function AdminSystem:ListItems(player)
     local items = {}
     for id, data in pairs(GameData.Items or {}) do
-        table.insert(items, {id = id, name = data.name or id, type = data.type or "unknown"})
+        table.insert(items, {
+            id = id, 
+            name = data.name or id, 
+            type = data.type or "unknown",
+            slot = data.slot or "",
+        })
     end
+    
+    -- Sort by name
+    table.sort(items, function(a, b) return a.id < b.id end)
     
     self.events.AdminEvent:FireClient(player, "item_list", {items = items})
     print("[AdminSystem] Sent item list to " .. player.Name .. " (" .. #items .. " items)")
@@ -217,14 +254,22 @@ end
 
 -- Set level
 function AdminSystem:SetLevel(player, level, targetPlayerName)
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    if level < 1 or level > 999 then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Level harus 1-999!"})
+        return
+    end
+    
+    local PlayerData = self:GetPlayerData()
     
     local target = player
     if targetPlayerName and targetPlayerName ~= "" then
-        target = game.Players:FindFirstChild(targetPlayerName)
+        target = Players:FindFirstChild(targetPlayerName)
     end
     
-    if not target then return end
+    if not target then
+        self.events.AdminEvent:FireClient(player, "error", {message = "Player tidak ditemukan!"})
+        return
+    end
     
     local pData = PlayerData:Get(target)
     if not pData then return end
@@ -241,7 +286,7 @@ end
 
 -- Give all items
 function AdminSystem:GiveAllItems(player)
-    local PlayerData = require(game.ServerScriptService.MainServer.ServerModules.PlayerData)
+    local PlayerData = self:GetPlayerData()
     local pData = PlayerData:Get(player)
     if not pData then return end
     
@@ -259,11 +304,6 @@ function AdminSystem:GiveAllItems(player)
     self.events.AdminEvent:FireClient(player, "success", {
         message = "Berhasil kasih semua equipment (" .. count .. " items)"
     })
-end
-
--- Check apakah player GM (dipakai module lain)
-function AdminSystem:IsGM(player)
-    return GMPlayers[player] == true
 end
 
 return AdminSystem
