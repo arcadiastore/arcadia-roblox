@@ -439,15 +439,6 @@ RunService.RenderStepped:Connect(function()
     SkillBar:UpdateCooldowns()
 end)
 
--- ItemAdjuster input (T to close when active)
-UserInputService.InputBegan:Connect(function(input, processed)
-    if ItemAdjuster:IsActive() and not processed then
-        if input.KeyCode == Enum.KeyCode.T then
-            ItemAdjuster:Deactivate()
-        end
-    end
-end)
-
 print("[Client] Equipment & Inventory connected!")
 
 print("[Client] ==========================================")

@@ -24,7 +24,8 @@ local isActive = false
 local currentSlot = "weapon1h"
 local targetModel = nil
 local allWelds = {}
-local originalC0s = {}  -- Store original C0 for reset
+local originalC0s = {}
+local lastToggleTime = 0  -- Cooldown for T key
 
 -- GUI
 local gui = nil
@@ -499,22 +500,31 @@ function ItemAdjuster:CopyToClipboard()
 end
 
 function ItemAdjuster:HandleInput(input, gameProcessed)
-    if not isActive then return end
-    if gameProcessed then return end
+    if gameProcessed then return false end
     
     if input.UserInputType == Enum.UserInputType.Keyboard then
         if input.KeyCode == Enum.KeyCode.T then
-            self:Deactivate()
+            local now = tick()
+            if now - lastToggleTime < 0.5 then return false end  -- Cooldown 0.5s
+            lastToggleTime = now
+            
+            if isActive then
+                self:Deactivate()
+            else
+                self:Activate()
+            end
             return true
-        elseif input.KeyCode == Enum.KeyCode.Tab then
-            self:SwitchSlot()
-            return true
-        elseif input.KeyCode == Enum.KeyCode.C then
-            self:CopyToClipboard()
-            return true
-        elseif input.KeyCode == Enum.KeyCode.R then
-            self:Reset()
-            return true
+        elseif isActive then
+            if input.KeyCode == Enum.KeyCode.Tab then
+                self:SwitchSlot()
+                return true
+            elseif input.KeyCode == Enum.KeyCode.C then
+                self:CopyToClipboard()
+                return true
+            elseif input.KeyCode == Enum.KeyCode.R then
+                self:Reset()
+                return true
+            end
         end
     end
     
