@@ -271,13 +271,14 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                 print("[EquipVisual] " .. itemId .. " -> " .. bodyPartName)
                 
                 -- Shirt/Pants template (armor yang mengikuti bentuk badan)
-                if v.shirtTemplate then
+                -- Jika ada shirt/pants template, apply dan skip parts
+                if v.shirtTemplate and v.shirtTemplate ~= "" then
                     local shirt = character:FindFirstChildOfClass("Shirt") or Instance.new("Shirt")
                     shirt.ShirtTemplate = v.shirtTemplate
                     shirt.Parent = character
                     print("[EquipVisual] Shirt applied: " .. v.shirtTemplate)
                 end
-                if v.pantsTemplate then
+                if v.pantsTemplate and v.pantsTemplate ~= "" then
                     local pants = character:FindFirstChildOfClass("Pants") or Instance.new("Pants")
                     pants.PantsTemplate = v.pantsTemplate
                     pants.Parent = character
@@ -295,26 +296,30 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                     end
                 end
                 
-                -- Koreksi ke titik genggam tangan (hanya untuk slot tangan)
-                local extraOffset = HAND_SLOTS[attachTo] and HAND_GRIP_OFFSET[rigType] or nil
+                -- SKIP parts creation jika sudah ada shirt/pants template
+                local hasClothing = (v.shirtTemplate and v.shirtTemplate ~= "") or (v.pantsTemplate and v.pantsTemplate ~= "")
                 
-                -- Create main part: kalau item punya "parts" (bentuk composite,
-                -- misal pedang: gagang+guard+bilah+ujung, atau helm: dome+brim),
-                -- pakai itu supaya berbentuk nyata. Kalau tidak, fallback ke
-                -- template/kotak lama.
-                local part
-                if v.parts then
-                    local bodyPart = character:FindFirstChild(bodyPartName)
-                    if bodyPart then
-                        local originCFrame = bodyPart.CFrame * (extraOffset or CFrame.new()) * (v.offset or CFrame.new())
-                        part = buildCompositeVisual(character, bodyPart, originCFrame, itemData)
+                if not hasClothing then
+                    -- Koreksi ke titik genggam tangan (hanya untuk slot tangan)
+                    local extraOffset = HAND_SLOTS[attachTo] and HAND_GRIP_OFFSET[rigType] or nil
+                    
+                    -- Create main part: kalau item punya "parts" (bentuk composite,
+                    -- misal pedang: gagang+guard+bilah+ujung, atau helm: dome+brim),
+                    -- pakai itu supaya berbentuk nyata. Kalau tidak, fallback ke
+                    -- template/kotak lama.
+                    local part
+                    if v.parts then
+                        local bodyPart = character:FindFirstChild(bodyPartName)
+                        if bodyPart then
+                            local originCFrame = bodyPart.CFrame * (extraOffset or CFrame.new()) * (v.offset or CFrame.new())
+                            part = buildCompositeVisual(character, bodyPart, originCFrame, itemData)
+                        end
+                    else
+                        part = createEquipPart(character, bodyPartName, v, itemData, extraOffset)
                     end
-                else
-                    part = createEquipPart(character, bodyPartName, v, itemData, extraOffset)
-                end
-                
-                -- Orb on staff
-                if part and v.orb then
+                    
+                    -- Orb on staff
+                    if part and v.orb then
                     local orb = createEquipPart(character, bodyPartName, {
                         meshId = v.orb.meshId,
                         textureId = v.orb.textureId,
@@ -409,6 +414,7 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                 end
                 
                 print("[EquipVisual] OK: " .. itemId)
+                end  -- end if not hasClothing
             end
         end
     end
