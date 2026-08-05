@@ -37,8 +37,19 @@ loadTemplates()
 -- R6 body parts
 local R6_PARTS = {"Head", "Torso", "Right Arm", "Left Arm", "Right Leg", "Left Leg"}
 
--- Map slot attachTo to actual body part names
-local ATTACH_MAP = {
+-- Map slot ke AccessoryType dan Attachment
+local SLOT_CONFIG = {
+    ["weapon1h"]   = { accType = Enum.AccessoryType.RightFront, attachment = "RightGripAttachment" },
+    ["weapon2h"]   = { accType = Enum.AccessoryType.RightFront, attachment = "RightGripAttachment" },
+    ["hat"]        = { accType = Enum.AccessoryType.Hat,        attachment = "HatAttachment" },
+    ["tshirt"]     = { accType = Enum.AccessoryType.Shirt,      attachment = "BodyFrontAttachment" },
+    ["pants"]      = { accType = Enum.AccessoryType.Pants,      attachment = "WaistCenterAttachment" },
+    ["shoes"]      = { accType = Enum.AccessoryType.LeftFront,  attachment = "LeftFootAttachment" },
+    ["wings"]      = { accType = Enum.AccessoryType.Back,       attachment = "BodyBackAttachment" },
+    ["necklace"]   = { accType = Enum.AccessoryType.Neck,       attachment = "NeckAttachment" },
+    ["ring"]       = { accType = Enum.AccessoryType.RightFront, attachment = "RightGripAttachment" },
+    ["costume"]    = { accType = Enum.AccessoryType.Back,       attachment = "BodyBackAttachment" },
+}
     ["Head"]       = {R6 = "Head",        R15 = "Head"},
     ["Torso"]      = {R6 = "Torso",       R15 = "UpperTorso"},
     ["Right Arm"]  = {R6 = "Right Arm",   R15 = "RightHand"},
@@ -115,10 +126,16 @@ function EquipmentVisuals:ClearVisuals(character)
 end
 
 -- Create Accessory from MeshPart template
-local function createAccessoryFromTemplate(template, itemData, offset)
+local function createAccessoryFromTemplate(template, itemData, offset, slot)
     local accessory = Instance.new("Accessory")
     accessory.Name = "Equip_" .. (itemData.id or "unknown")
     accessory:SetAttribute(TAG, true)
+    
+    -- Set AccessoryType berdasarkan slot
+    local config = SLOT_CONFIG[slot]
+    if config then
+        accessory.AccessoryType = config.accType
+    end
     
     -- Clone the handle from template
     local handle = template:Clone()
@@ -131,6 +148,12 @@ local function createAccessoryFromTemplate(template, itemData, offset)
     if offset then
         handle.CFrame = CFrame.new() * offset
     end
+    
+    -- Create Attachment point di Handle
+    local attName = config and config.attachment or "BodyFrontAttachment"
+    local att = Instance.new("Attachment")
+    att.Name = attName
+    att.Parent = handle
     
     handle.Parent = accessory
     return accessory
@@ -261,6 +284,12 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                                 acc.Name = "Equip_" .. itemId
                                 acc:SetAttribute(TAG, true)
                                 
+                                -- Set AccessoryType berdasarkan slot
+                                local config = SLOT_CONFIG[itemData.slot]
+                                if config then
+                                    acc.AccessoryType = config.accType
+                                end
+                                
                                 -- Clone semua parts
                                 local clonedParts = {}
                                 for _, p in ipairs(allParts) do
@@ -281,6 +310,12 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                                     offset = HAND_GRIP_OFFSET[rigType] * offset
                                 end
                                 handle.CFrame = CFrame.new() * offset
+                                
+                                -- Create Attachment point di Handle
+                                local attName = config and config.attachment or "BodyFrontAttachment"
+                                local att = Instance.new("Attachment")
+                                att.Name = attName
+                                att.Parent = handle
                                 
                                 -- Weld other parts to Handle
                                 for name, p in pairs(clonedParts) do
