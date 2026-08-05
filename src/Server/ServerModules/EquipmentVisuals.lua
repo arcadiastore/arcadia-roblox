@@ -134,7 +134,10 @@ local function createEquipPart(character, bodyPartName, visualData, itemData, ex
             part.Shape = Enum.PartType.Cylinder
         end
         part.Size = visualData.size or Vector3.new(1, 1, 1)
-        warn("[EquipVisual] No template/parts found for " .. itemId .. ", using basic Part (kotak). Tambahkan 'parts' di visual data item ini agar berbentuk.")
+        -- Hanya warn jika benar-benar tidak ada visual data
+        if not visualData.shape and not visualData.size then
+            warn("[EquipVisual] No visual data for " .. itemId .. ". Tambahkan 'parts' atau 'shape/size' di visual data.")
+        end
     end
     
     part.Name = "Equip_" .. itemId

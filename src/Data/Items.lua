@@ -1056,6 +1056,53 @@ Items["basic_wings"] = {
     icon = "rbxassetid://0",
 }
 
+-- Helper: tali = beberapa cylinder melilit + simpul di atas
+local function makeRopeVisual(opts)
+    opts = opts or {}
+    local color = opts.color or Color3.fromRGB(180, 150, 100)
+    local mat = opts.material or Enum.Material.Fabric
+    local scale = opts.scale or 1
+    return {
+        attachTo = "Torso",
+        offset = CFrame.new(0, 0, 0.8) * CFrame.Angles(0, 0, 0),
+        parts = {
+            {
+                name = "Rope1", shape = "Cylinder",
+                size = Vector3.new(3.5, 0.18, 0.18) * scale,
+                color = color, material = mat,
+                offset = CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, math.rad(90)),
+            },
+            {
+                name = "Rope2", shape = "Cylinder", relativeTo = "Rope1",
+                size = Vector3.new(3.2, 0.18, 0.18) * scale,
+                color = color, material = mat,
+                offset = CFrame.new(0, 0.22, 0) * CFrame.Angles(0, 0, math.rad(90)),
+            },
+            {
+                name = "Rope3", shape = "Cylinder", relativeTo = "Rope1",
+                size = Vector3.new(2.8, 0.16, 0.16) * scale,
+                color = color, material = mat,
+                offset = CFrame.new(0, -0.22, 0) * CFrame.Angles(0, 0, math.rad(90)),
+            },
+            {
+                -- simpul / loop di atas
+                name = "Knot", shape = "Ball", relativeTo = "Rope1",
+                size = Vector3.new(0.35, 0.35, 0.35) * scale,
+                color = color, material = mat,
+                offset = CFrame.new(1.8, 0, 0),
+            },
+            {
+                -- hook/clip kecil
+                name = "Hook", shape = "Cylinder", relativeTo = "Knot",
+                size = Vector3.new(0.3, 0.12, 0.12) * scale,
+                color = Color3.fromRGB(150, 150, 150),
+                material = Enum.Material.Metal,
+                offset = CFrame.new(0.2, 0, 0) * CFrame.Angles(0, 0, math.rad(45)),
+            },
+        },
+    }
+end
+
 Items["rope_climbing"] = {
     id = "rope_climbing",
     name = "Climbing Rope",
@@ -1066,13 +1113,9 @@ Items["rope_climbing"] = {
     sellPrice = 100,
     levelReq = 3,
     stats = {spd = 3, def = 1},
-    visual = {
-        color = Color3.fromRGB(180, 150, 100),  -- coklat tali
-        size = Vector3.new(2, 0.22, 0.22),  -- tali bulat, bukan kotak
-        shape = "Cylinder",
-        offset = CFrame.new(0, 0, 1) * CFrame.Angles(0, 0, math.rad(90)),
-        attachTo = "Torso",
-    },
+    visual = makeRopeVisual({
+        color = Color3.fromRGB(180, 150, 100),
+    }),
     icon = "rbxassetid://0",
 }
 
