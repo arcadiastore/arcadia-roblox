@@ -184,18 +184,28 @@ function ItemAdjuster:FindEquippedItem(slot)
     local character = player.Character
     if not character then return nil end
     
-    -- Look for equipped visuals by naming convention
+    -- Look for equipped visuals by naming pattern "Equip_"
+    local found = {}
     for _, child in ipairs(character:GetDescendants()) do
-        if child.Name == "EquipVisual_" .. slot then
-            return child
+        if child.Name and child.Name:match("^Equip_") then
+            table.insert(found, child)
         end
     end
     
-    -- Also check for Tool in character
+    -- Also check Accessory objects
     for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Tool") and child:GetAttribute("EquipSlot") == slot then
-            return child
+        if child:IsA("Accessory") then
+            table.insert(found, child)
         end
+    end
+    
+    -- Return first found (or nil)
+    if #found > 0 then
+        print("[ItemAdjuster] Found " .. #found .. " equipped visuals:")
+        for i, item in ipairs(found) do
+            print("  " .. i .. ". " .. item.Name .. " (" .. item.ClassName .. ")")
+        end
+        return found[1]
     end
     
     return nil
