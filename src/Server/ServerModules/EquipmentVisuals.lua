@@ -67,7 +67,9 @@ end
 local function getPartName(slot, rigType)
     local r6Name = SLOT_TO_PART[slot] or "Torso"
     if rigType == "R15" then
-        return R15_MAP[r6Name] or r6Name
+        local r15Name = R15_MAP[r6Name] or r6Name
+        print("[EquipVisual] getPartName: " .. slot .. " -> " .. r6Name .. " -> " .. r15Name)
+        return r15Name
     end
     return r6Name
 end
@@ -125,12 +127,17 @@ local function applyWeapon(character, itemId, v, bodyPart, rigType)
     local offset = v.offset or CFrame.new(1.5, 0, 0)
     local scale = v.scale or 1
     
+    print("[EquipVisual] Template type: " .. template.ClassName)
+    
     -- Cari MeshPart dari template
     local meshPart = nil
     if template:IsA("MeshPart") or template:IsA("Part") then
         meshPart = template
     elseif template:IsA("Model") then
         meshPart = template:FindFirstChildWhichIsA("MeshPart") or template:FindFirstChildWhichIsA("Part")
+        if meshPart then
+            print("[EquipVisual] Found in Model: " .. meshPart.Name .. " (Size: " .. tostring(meshPart.Size) .. ")")
+        end
     elseif template:IsA("Accessory") then
         local handle = template:FindFirstChild("Handle")
         if handle and (handle:IsA("MeshPart") or handle:IsA("Part")) then
@@ -149,12 +156,15 @@ local function applyWeapon(character, itemId, v, bodyPart, rigType)
     part.CanCollide = false
     part.Massless = true
     part.Anchored = false
+    part.Transparency = 0  -- Pastikan tidak transparan
     part:SetAttribute(TAG, true)
     
     -- Scale
     if scale ~= 1 then
         part.Size = part.Size * scale
     end
+    
+    print("[EquipVisual] Cloned size: " .. tostring(part.Size) .. ", Transparency: " .. tostring(part.Transparency))
     
     -- Position di tangan
     part.CFrame = bodyPart.CFrame * offset
@@ -167,7 +177,7 @@ local function applyWeapon(character, itemId, v, bodyPart, rigType)
     
     part.Parent = character
     
-    print("[EquipVisual] Weapon welded: " .. itemId .. " -> " .. bodyPart.Name)
+    print("[EquipVisual] Weapon welded: " .. itemId .. " -> " .. bodyPart.Name .. " at " .. tostring(part.Position))
 end
 
 -- ARMOR: Shirt/Pants template
