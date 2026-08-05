@@ -685,9 +685,10 @@ Items["leather_armor"] = {
     levelReq = 1,
     stats = {def = 5},
     visual = {
-        -- Shirt template ID dari Roblox (upload shirt kamu sendiri)
-        -- Cara: Roblox Creator Dashboard → Development Items → Shirts → Upload
-        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx setelah upload
+        -- Top/Jacket free dari Roblox
+        -- Top: rbxassetid://9240752338 (Tie-Front Top - White)
+        -- Jacket: rbxassetid://7192549218 (Leather Jacket - Black)
+        shirtTemplate = "rbxassetid://7192549218",  -- Leather Jacket - cocok untuk armor!
         attachTo = "Torso",
         fullBody = true,
         color = Color3.fromRGB(120, 75, 30),  -- fallback color
@@ -706,7 +707,7 @@ Items["iron_chestplate"] = {
     levelReq = 7,
     stats = {def = 12, hp = 20},
     visual = {
-        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
+        shirtTemplate = "rbxassetid://9240757332",  -- Knit Sweater - Black (mirip armor)
         attachTo = "Torso",
         fullBody = true,
         color = Color3.fromRGB(140, 140, 150),
@@ -725,8 +726,7 @@ Items["cloth_robe"] = {
     levelReq = 3,
     stats = {def = 2, matk = 3, mp = 15},
     visual = {
-        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
-        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx (untuk rok/jubah bawah)
+        shirtTemplate = "rbxassetid://8648380153",  -- Trench Coat - White (cocok untuk robe!)
         attachTo = "Torso",
         fullBody = true,
         color = Color3.fromRGB(40, 40, 120),
@@ -778,7 +778,7 @@ Items["leather_pants"] = {
     levelReq = 1,
     stats = {def = 3},
     visual = {
-        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx setelah upload pants
+        pantsTemplate = "rbxassetid://6984763785",  -- Casual Sweats - Black
         attachTo = "Torso",
         color = Color3.fromRGB(100, 65, 25),
     },
@@ -796,7 +796,7 @@ Items["iron_leggings"] = {
     levelReq = 5,
     stats = {def = 6, spd = -1},
     visual = {
-        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
+        pantsTemplate = "rbxassetid://6984740059",  -- Cargo Pants - Brown
         attachTo = "Torso",
         color = Color3.fromRGB(130, 130, 140),
     },
