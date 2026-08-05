@@ -209,10 +209,12 @@ local function applyWeapon(character, itemId, v, bodyPart, rigType)
         
         clone.CFrame = bodyPart.CFrame * offset * relCF
         
-        -- Weld ke body part
-        local weld = Instance.new("WeldConstraint")
+        -- Weld ke body part (pakai Weld, bukan WeldConstraint, supaya bisa adjust C0)
+        local weld = Instance.new("Weld")
+        weld.Name = "EquipWeld_" .. itemId
         weld.Part0 = bodyPart
         weld.Part1 = clone
+        weld.C0 = bodyPart.CFrame:Inverse() * clone.CFrame
         weld.Parent = clone
         
         clone.Parent = character

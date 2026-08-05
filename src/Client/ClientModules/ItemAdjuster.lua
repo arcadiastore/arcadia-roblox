@@ -216,30 +216,28 @@ function ItemAdjuster:SelectTarget(model)
     targetWeld = nil
     
     -- Find the weld that attaches this to character
-    if model:IsA("Model") then
-        -- Look for WeldConstraint or Weld in the model
+    -- Look for EquipWeld_ first (our custom welds)
+    for _, desc in ipairs(model:GetDescendants()) do
+        if desc:IsA("Weld") and desc.Name:match("^EquipWeld_") then
+            targetWeld = desc
+            break
+        end
+    end
+    
+    -- Fallback: any Weld
+    if not targetWeld then
         for _, desc in ipairs(model:GetDescendants()) do
-            if desc:IsA("Weld") or desc:IsA("WeldConstraint") then
-                if desc.Part1 or desc.Part0 then
-                    targetWeld = desc
-                    break
-                end
+            if desc:IsA("Weld") then
+                targetWeld = desc
+                break
             end
         end
-        
-        -- Also check primary part
-        if not targetWeld and model.PrimaryPart then
-            for _, desc in ipairs(model.PrimaryPart:GetChildren()) do
-                if desc:IsA("Weld") or desc:IsA("WeldConstraint") then
-                    targetWeld = desc
-                    break
-                end
-            end
-        end
-    elseif model:IsA("BasePart") then
-        -- Look for weld on the part
+    end
+    
+    -- Also check parent if model is a part
+    if not targetWeld and model:IsA("BasePart") then
         for _, desc in ipairs(model:GetChildren()) do
-            if desc:IsA("Weld") or desc:IsA("WeldConstraint") then
+            if desc:IsA("Weld") then
                 targetWeld = desc
                 break
             end
@@ -250,6 +248,12 @@ function ItemAdjuster:SelectTarget(model)
     
     if statusLabel then
         statusLabel.Text = "Slot: " .. currentSlot .. " | Model: " .. model.Name .. " | Weld: " .. (targetWeld and targetWeld.Name or "NONE")
+    end
+    
+    if targetWeld then
+        print("[ItemAdjuster] Found weld: " .. targetWeld.Name .. " C0: " .. tostring(targetWeld.C0))
+    else
+        warn("[ItemAdjuster] No weld found on " .. model.Name)
     end
 end
 
