@@ -18,8 +18,7 @@ local AdminSystem = {}
 -- Tambahkan UserId admin di sini
 -- ============================================
 local ADMIN_IDS = {
-    123456789,  -- Contoh, ganti dengan UserId kamu
-    -- Tambah UserId lain di sini
+    8892555519,  -- Astagfirulove (Owner)
 }
 
 -- Helper: cek apakah player admin
