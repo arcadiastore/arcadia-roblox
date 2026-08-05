@@ -684,12 +684,14 @@ Items["leather_armor"] = {
     sellPrice = 75,
     levelReq = 1,
     stats = {def = 5},
-    visual = makeChestVisual({
-        color = Color3.fromRGB(120, 75, 30),  -- coklat gelap
-        material = Enum.Material.Leather,
-        size = Vector3.new(2.5, 2.5, 1.5),
-        pauldrons = false,
-    }),
+    visual = {
+        -- Shirt template ID dari Roblox (upload shirt kamu sendiri)
+        -- Cara: Roblox Creator Dashboard → Development Items → Shirts → Upload
+        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx setelah upload
+        attachTo = "Torso",
+        fullBody = true,
+        color = Color3.fromRGB(120, 75, 30),  -- fallback color
+    },
     icon = "rbxassetid://0",
 }
 
@@ -703,13 +705,12 @@ Items["iron_chestplate"] = {
     sellPrice = 250,
     levelReq = 7,
     stats = {def = 12, hp = 20},
-    visual = makeChestVisual({
-        color = Color3.fromRGB(140, 140, 150),  -- abu besi
-        material = Enum.Material.Metal,
-        size = Vector3.new(2.6, 2.4, 1.6),
-        pauldrons = true,
-        pauldronColor = Color3.fromRGB(120, 120, 130),
-    }),
+    visual = {
+        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
+        attachTo = "Torso",
+        fullBody = true,
+        color = Color3.fromRGB(140, 140, 150),
+    },
     icon = "rbxassetid://0",
 }
 
@@ -723,10 +724,13 @@ Items["cloth_robe"] = {
     sellPrice = 100,
     levelReq = 3,
     stats = {def = 2, matk = 3, mp = 15},
-    visual = makeRobeVisual({
-        color = Color3.fromRGB(40, 40, 120),  -- biru gelap
-        skirtColor = Color3.fromRGB(30, 30, 95),
-    }),
+    visual = {
+        shirtTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
+        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx (untuk rok/jubah bawah)
+        attachTo = "Torso",
+        fullBody = true,
+        color = Color3.fromRGB(40, 40, 120),
+    },
     icon = "rbxassetid://0",
 }
 
@@ -773,10 +777,11 @@ Items["leather_pants"] = {
     sellPrice = 50,
     levelReq = 1,
     stats = {def = 3},
-    visual = makePantsVisual({
-        color = Color3.fromRGB(100, 65, 25),  -- coklat kulit
-        material = Enum.Material.Leather,
-    }),
+    visual = {
+        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx setelah upload pants
+        attachTo = "Torso",
+        color = Color3.fromRGB(100, 65, 25),
+    },
     icon = "rbxassetid://0",
 }
 
@@ -790,12 +795,11 @@ Items["iron_leggings"] = {
     sellPrice = 150,
     levelReq = 5,
     stats = {def = 6, spd = -1},
-    visual = makePantsVisual({
-        color = Color3.fromRGB(130, 130, 140),  -- abu besi
-        material = Enum.Material.Metal,
-        waistSize = Vector3.new(2.3, 0.75, 1.4),
-        legSize = Vector3.new(1.6, 0.72, 0.72),
-    }),
+    visual = {
+        pantsTemplate = "",  -- ISI DENGAN rbxassetid://xxxxx
+        attachTo = "Torso",
+        color = Color3.fromRGB(130, 130, 140),
+    },
     icon = "rbxassetid://0",
 }
 

@@ -270,7 +270,21 @@ function EquipmentVisuals:ApplyVisuals(character, playerData)
                 
                 print("[EquipVisual] " .. itemId .. " -> " .. bodyPartName)
                 
-                -- FullBody costume
+                -- Shirt/Pants template (armor yang mengikuti bentuk badan)
+                if v.shirtTemplate then
+                    local shirt = character:FindFirstChildOfClass("Shirt") or Instance.new("Shirt")
+                    shirt.ShirtTemplate = v.shirtTemplate
+                    shirt.Parent = character
+                    print("[EquipVisual] Shirt applied: " .. v.shirtTemplate)
+                end
+                if v.pantsTemplate then
+                    local pants = character:FindFirstChildOfClass("Pants") or Instance.new("Pants")
+                    pants.PantsTemplate = v.pantsTemplate
+                    pants.Parent = character
+                    print("[EquipVisual] Pants applied: " .. v.pantsTemplate)
+                end
+                
+                -- FullBody costume (tetap ganti warna body parts)
                 if v.fullBody then
                     for _, partName in ipairs(R6_PARTS) do
                         local rName = getBodyPartName(partName, rigType)
