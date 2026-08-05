@@ -475,10 +475,7 @@ function ItemAdjuster:HandleInput(input, gameProcessed)
     
     -- Key binds
     if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == Enum.KeyCode.T then
-            self:Deactivate()
-            return true
-        elseif input.KeyCode == Enum.KeyCode.Tab then
+        if input.KeyCode == Enum.KeyCode.Tab then
             self:SwitchSlot()
             return true
         elseif input.KeyCode == Enum.KeyCode.C then
