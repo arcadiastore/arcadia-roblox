@@ -1,14 +1,12 @@
 --[[
-    ItemAdjuster.lua
-    Client-side drag-to-adjust equipment position
+    ItemAdjuster.lua v3 - Slider-based equipment adjuster
     
     Fitur:
-    - Klik kiri + drag = geser posisi (X, Y, Z)
-    - Klik kanan + drag = putar rotasi
-    - Scroll = geser Z (maju/mundur)
-    - R = reset ke default
-    - C = copy CFrame ke clipboard
-    - Tab = switch antar equipment yang di-equip
+    - GUI panel dengan slider untuk X, Y, Z dan RotX, RotY, RotZ
+    - Real-time preview saat geser slider
+    - Switch antar equipment slot
+    - Copy hasil ke console
+    - Reset ke default
 ]]
 
 local ItemAdjuster = {}
@@ -19,104 +17,339 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
+local playerGui = player:WaitForChild("PlayerGui")
 
 -- State
 local isActive = false
-local currentSlot = "weapon1h"  -- Current equipment slot being adjusted
-local targetModel = nil         -- Model/part being dragged
-local targetWeld = nil          -- Primary weld for display
-local allWelds = {}             -- ALL welds to adjust
-local isDragging = false
-local isRotating = false
-local lastMousePos = nil
-
--- Sensitivity
-local DRAG_SPEED = 0.01       -- Studs per pixel
-local ROTATE_SPEED = 0.5      -- Degrees per pixel
-local SCROLL_SPEED = 0.1      -- Studs per scroll
+local currentSlot = "weapon1h"
+local targetModel = nil
+local allWelds = {}
+local originalC0s = {}  -- Store original C0 for reset
 
 -- GUI
 local gui = nil
-local statusLabel = nil
-local coordLabel = nil
+local sliders = {}
+local slotLabel = nil
 
--- Available slots to adjust
-local ADJUSTABLE_SLOTS = {
-    "weapon1h", "weapon2h", "hat", "wings", "shoes", "necklace", "costume"
-}
+-- Slider config
+local SLIDER_MIN = -5
+local SLIDER_MAX = 5
+local SLIDER_STEP = 0.05
+local ROT_MIN = -180
+local ROT_MAX = 180
+local ROT_STEP = 1
 
-function ItemAdjuster:Create(parentGui)
+-- Colors
+local BG_COLOR = Color3.fromRGB(25, 25, 35)
+local PANEL_COLOR = Color3.fromRGB(35, 35, 50)
+local ACCENT_COLOR = Color3.fromRGB(255, 215, 0)
+local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+local SLIDER_BG = Color3.fromRGB(50, 50, 70)
+local SLIDER_FILL = Color3.fromRGB(100, 180, 255)
+local BTN_COLOR = Color3.fromRGB(60, 60, 80)
+local SUCCESS_COLOR = Color3.fromRGB(80, 255, 80)
+
+function ItemAdjuster:Create()
+    -- Main GUI
     gui = Instance.new("ScreenGui")
     gui.Name = "ItemAdjusterGui"
     gui.ResetOnSpawn = false
     gui.Enabled = false
-    gui.Parent = parentGui
+    gui.Parent = playerGui
     
-    -- Status panel (bottom center)
-    local panel = Instance.new("Frame")
-    panel.Name = "Panel"
-    panel.Size = UDim2.new(0, 400, 0, 120)
-    panel.Position = UDim2.new(0.5, -200, 1, -130)
-    panel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    panel.BackgroundTransparency = 0.1
-    panel.BorderSizePixel = 0
-    panel.Parent = gui
+    -- Main frame (right side)
+    local frame = Instance.new("Frame")
+    frame.Name = "MainFrame"
+    frame.Size = UDim2.new(0, 300, 0, 450)
+    frame.Position = UDim2.new(1, -310, 0.5, -225)
+    frame.BackgroundColor3 = BG_COLOR
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = panel
+    corner.Parent = frame
     
     -- Title
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -10, 0, 25)
+    title.Size = UDim2.new(1, -10, 0, 30)
     title.Position = UDim2.new(0, 5, 0, 5)
     title.BackgroundTransparency = 1
-    title.Text = "ITEM ADJUSTER"
-    title.TextColor3 = Color3.fromRGB(255, 215, 0)
+    title.Text = "EQUIPMENT ADJUSTER"
+    title.TextColor3 = ACCENT_COLOR
     title.TextSize = 16
     title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = panel
+    title.Parent = frame
     
-    -- Status
-    statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -10, 0, 20)
-    statusLabel.Position = UDim2.new(0, 5, 0, 30)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Slot: weapon1h | Drag to move, Right-drag to rotate"
-    statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    statusLabel.TextSize = 13
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statusLabel.Parent = panel
+    -- Slot display
+    slotLabel = Instance.new("TextLabel")
+    slotLabel.Size = UDim2.new(1, -10, 0, 20)
+    slotLabel.Position = UDim2.new(0, 5, 0, 35)
+    slotLabel.BackgroundTransparency = 1
+    slotLabel.Text = "Slot: weapon1h"
+    slotLabel.TextColor3 = TEXT_COLOR
+    slotLabel.TextSize = 14
+    slotLabel.Font = Enum.Font.Gotham
+    slotLabel.Parent = frame
     
-    -- Coordinates
-    coordLabel = Instance.new("TextLabel")
-    coordLabel.Size = UDim2.new(1, -10, 0, 20)
-    coordLabel.Position = UDim2.new(0, 5, 0, 50)
-    coordLabel.BackgroundTransparency = 1
-    coordLabel.Text = "Offset: 0, 0, 0 | Rotation: 0, 0, 0"
-    coordLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
-    coordLabel.TextSize = 13
-    coordLabel.Font = Enum.Font.Code
-    coordLabel.TextXAlignment = Enum.TextXAlignment.Left
-    coordLabel.Parent = panel
+    -- Sliders container
+    local sliderFrame = Instance.new("ScrollingFrame")
+    sliderFrame.Name = "Sliders"
+    sliderFrame.Size = UDim2.new(1, -10, 1, -130)
+    sliderFrame.Position = UDim2.new(0, 5, 0, 60)
+    sliderFrame.BackgroundTransparency = 1
+    sliderFrame.ScrollBarThickness = 4
+    sliderFrame.CanvasSize = UDim2.new(0, 0, 0, 300)
+    sliderFrame.Parent = frame
     
-    -- Controls help
-    local help = Instance.new("TextLabel")
-    help.Size = UDim2.new(1, -10, 0, 40)
-    help.Position = UDim2.new(0, 5, 0, 75)
-    help.BackgroundTransparency = 1
-    help.Text = "LMB Drag=Move | RMB Drag=Rotate | Scroll=Z | Tab=Switch Slot | C=Copy | R=Reset | T=Done"
-    help.TextColor3 = Color3.fromRGB(150, 150, 180)
-    help.TextSize = 11
-    help.Font = Enum.Font.Gotham
-    help.TextWrapped = true
-    help.TextXAlignment = Enum.TextXAlignment.Left
-    help.Parent = panel
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 8)
+    layout.Parent = sliderFrame
+    
+    -- Create sliders
+    local sliderDefs = {
+        {name = "Position X", key = "posX", min = SLIDER_MIN, max = SLIDER_MAX, step = SLIDER_STEP},
+        {name = "Position Y", key = "posY", min = SLIDER_MIN, max = SLIDER_MAX, step = SLIDER_STEP},
+        {name = "Position Z", key = "posZ", min = SLIDER_MIN, max = SLIDER_MAX, step = SLIDER_STEP},
+        {name = "Rotation X", key = "rotX", min = ROT_MIN, max = ROT_MAX, step = ROT_STEP},
+        {name = "Rotation Y", key = "rotY", min = ROT_MIN, max = ROT_MAX, step = ROT_STEP},
+        {name = "Rotation Z", key = "rotZ", min = ROT_MIN, max = ROT_MAX, step = ROT_STEP},
+    }
+    
+    for _, def in ipairs(sliderDefs) do
+        sliders[def.key] = self:CreateSlider(sliderFrame, def)
+    end
+    
+    -- Buttons
+    local btnFrame = Instance.new("Frame")
+    btnFrame.Size = UDim2.new(1, -10, 0, 80)
+    btnFrame.Position = UDim2.new(0, 5, 1, -85)
+    btnFrame.BackgroundTransparency = 1
+    btnFrame.Parent = frame
+    
+    local btnLayout = Instance.new("UIListLayout")
+    btnLayout.Padding = UDim.new(0, 5)
+    btnLayout.FillDirection = Enum.FillDirection.Horizontal
+    btnLayout.Parent = btnFrame
+    
+    -- Copy button
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Size = UDim2.new(0.5, -3, 0, 35)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+    copyBtn.Text = "COPY"
+    copyBtn.TextColor3 = TEXT_COLOR
+    copyBtn.TextSize = 14
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.Parent = btnFrame
+    local copyCorner = Instance.new("UICorner")
+    copyCorner.CornerRadius = UDim.new(0, 6)
+    copyCorner.Parent = copyBtn
+    
+    copyBtn.MouseButton1Click:Connect(function()
+        self:CopyToClipboard()
+    end)
+    
+    -- Reset button
+    local resetBtn = Instance.new("TextButton")
+    resetBtn.Size = UDim2.new(0.5, -3, 0, 35)
+    resetBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    resetBtn.Text = "RESET"
+    resetBtn.TextColor3 = TEXT_COLOR
+    resetBtn.TextSize = 14
+    resetBtn.Font = Enum.Font.GothamBold
+    resetBtn.Parent = btnFrame
+    local resetCorner = Instance.new("UICorner")
+    resetCorner.CornerRadius = UDim.new(0, 6)
+    resetCorner.Parent = resetBtn
+    
+    resetBtn.MouseButton1Click:Connect(function()
+        self:Reset()
+    end)
+    
+    -- Switch Slot button
+    local switchBtn = Instance.new("TextButton")
+    switchBtn.Size = UDim2.new(1, 0, 0, 30)
+    switchBtn.BackgroundColor3 = BTN_COLOR
+    switchBtn.Text = "SWITCH SLOT (Tab)"
+    switchBtn.TextColor3 = TEXT_COLOR
+    switchBtn.TextSize = 12
+    switchBtn.Font = Enum.Font.Gotham
+    switchBtn.Parent = btnFrame
+    local switchCorner = Instance.new("UICorner")
+    switchCorner.CornerRadius = UDim.new(0, 6)
+    switchCorner.Parent = switchBtn
+    
+    switchBtn.MouseButton1Click:Connect(function()
+        self:SwitchSlot()
+    end)
     
     print("[ItemAdjuster] Created! Press T to toggle.")
+end
+
+function ItemAdjuster:CreateSlider(parent, def)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 45)
+    container.BackgroundColor3 = PANEL_COLOR
+    container.BorderSizePixel = 0
+    container.Parent = parent
+    
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 6)
+    containerCorner.Parent = container
+    
+    -- Label
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.4, 0, 0, 20)
+    label.Position = UDim2.new(0, 5, 0, 2)
+    label.BackgroundTransparency = 1
+    label.Text = def.name
+    label.TextColor3 = TEXT_COLOR
+    label.TextSize = 12
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+    
+    -- Value label
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0.3, 0, 0, 20)
+    valueLabel.Position = UDim2.new(0.7, 0, 0, 2)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = "0.00"
+    valueLabel.TextColor3 = ACCENT_COLOR
+    valueLabel.TextSize = 12
+    valueLabel.Font = Enum.Font.Code
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = container
+    
+    -- Slider track
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, -10, 0, 8)
+    track.Position = UDim2.new(0, 5, 0, 28)
+    track.BackgroundColor3 = SLIDER_BG
+    track.BorderSizePixel = 0
+    track.Parent = container
+    
+    local trackCorner = Instance.new("UICorner")
+    trackCorner.CornerRadius = UDim.new(0, 4)
+    trackCorner.Parent = track
+    
+    -- Slider fill
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.new(0.5, 0, 1, 0)
+    fill.BackgroundColor3 = SLIDER_FILL
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 4)
+    fillCorner.Parent = fill
+    
+    -- Slider handle
+    local handle = Instance.new("TextButton")
+    handle.Name = "Handle"
+    handle.Size = UDim2.new(0, 16, 0, 16)
+    handle.Position = UDim2.new(0.5, -8, 0.5, -8)
+    handle.BackgroundColor3 = ACCENT_COLOR
+    handle.Text = ""
+    handle.Parent = track
+    
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(0, 8)
+    handleCorner.Parent = handle
+    
+    -- Slider logic
+    local sliderData = {
+        container = container,
+        label = label,
+        valueLabel = valueLabel,
+        track = track,
+        fill = fill,
+        handle = handle,
+        key = def.key,
+        min = def.min,
+        max = def.max,
+        step = def.step,
+        value = 0,
+    }
+    
+    -- Mouse drag on handle
+    local dragging = false
+    
+    handle.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local trackAbsPos = track.AbsolutePosition
+            local trackAbsSize = track.AbsoluteSize
+            local mouseX = input.Position.X
+            
+            local ratio = math.clamp((mouseX - trackAbsPos.X) / trackAbsSize.X, 0, 1)
+            local rawValue = def.min + ratio * (def.max - def.min)
+            local stepped = math.floor(rawValue / def.step + 0.5) * def.step
+            
+            self:SetSliderValue(sliderData, stepped)
+        end
+    end)
+    
+    -- Click on track to jump
+    track.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local trackAbsPos = track.AbsolutePosition
+            local trackAbsSize = track.AbsoluteSize
+            local mouseX = input.Position.X
+            
+            local ratio = math.clamp((mouseX - trackAbsPos.X) / trackAbsSize.X, 0, 1)
+            local rawValue = def.min + ratio * (def.max - def.min)
+            local stepped = math.floor(rawValue / def.step + 0.5) * def.step
+            
+            self:SetSliderValue(sliderData, stepped)
+        end
+    end)
+    
+    return sliderData
+end
+
+function ItemAdjuster:SetSliderValue(sliderData, value)
+    value = math.clamp(value, sliderData.min, sliderData.max)
+    sliderData.value = value
+    
+    -- Update visual
+    local ratio = (value - sliderData.min) / (sliderData.max - sliderData.min)
+    sliderData.fill.Size = UDim2.new(ratio, 0, 1, 0)
+    sliderData.handle.Position = UDim2.new(ratio, -8, 0.5, -8)
+    sliderData.valueLabel.Text = string.format("%.2f", value)
+    
+    -- Apply to equipment
+    self:ApplyCurrentValues()
+end
+
+function ItemAdjuster:ApplyCurrentValues()
+    if not targetModel or #allWelds == 0 then return end
+    
+    local px = sliders.posX.value
+    local py = sliders.posY.value
+    local pz = sliders.posZ.value
+    local rx = sliders.rotX.value
+    local ry = sliders.rotY.value
+    local rz = sliders.rotZ.value
+    
+    local offsetCF = CFrame.new(px, py, pz) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+    
+    -- Apply to all welds relative to original C0
+    for i, weld in ipairs(allWelds) do
+        if weld and weld.Parent and originalC0s[i] then
+            weld.C0 = originalC0s[i] * offsetCF
+        end
+    end
 end
 
 function ItemAdjuster:Toggle()
@@ -134,58 +367,33 @@ function ItemAdjuster:Activate()
     end
     
     -- Find equipped items
-    local character = player.Character
-    if not character then
-        warn("[ItemAdjuster] No character!")
-        return
-    end
-    
-    -- Find the first equipped visual
-    local found = self:FindEquippedItem(currentSlot)
-    if not found then
-        -- Try other slots
-        for _, slot in ipairs(ADJUSTABLE_SLOTS) do
-            found = self:FindEquippedItem(slot)
-            if found then
-                currentSlot = slot
-                break
-            end
-        end
-    end
-    
-    if not found then
+    local found = self:FindEquippedItems()
+    if not found or #found == 0 then
         warn("[ItemAdjuster] No equipped items found!")
         return
     end
     
     isActive = true
     gui.Enabled = true
-    self:SelectTarget(found)
     
-    -- Highlight
-    self:SetHighlight(true)
+    -- Select first item
+    self:SelectTarget(found[1])
     
-    print("[ItemAdjuster] Active! Slot: " .. currentSlot)
+    print("[ItemAdjuster] Active! Adjust with sliders.")
 end
 
 function ItemAdjuster:Deactivate()
     isActive = false
-    isDragging = false
-    isRotating = false
-    
     if gui then
         gui.Enabled = false
     end
-    
-    self:SetHighlight(false)
     print("[ItemAdjuster] Deactivated.")
 end
 
-function ItemAdjuster:FindEquippedItem(slot)
+function ItemAdjuster:FindEquippedItems()
     local character = player.Character
-    if not character then return nil end
+    if not character then return {} end
     
-    -- Look for equipped visuals by naming pattern "Equip_"
     local found = {}
     for _, child in ipairs(character:GetDescendants()) do
         if child.Name and child.Name:match("^Equip_") then
@@ -193,280 +401,112 @@ function ItemAdjuster:FindEquippedItem(slot)
         end
     end
     
-    -- Also check Accessory objects
     for _, child in ipairs(character:GetChildren()) do
         if child:IsA("Accessory") then
             table.insert(found, child)
         end
     end
     
-    -- Return first found (or nil)
-    if #found > 0 then
-        print("[ItemAdjuster] Found " .. #found .. " equipped visuals:")
-        for i, item in ipairs(found) do
-            print("  " .. i .. ". " .. item.Name .. " (" .. item.ClassName .. ")")
-        end
-        return found[1]
-    end
-    
-    return nil
+    return found
 end
 
 function ItemAdjuster:SelectTarget(model)
     targetModel = model
-    allWelds = {}  -- Collect ALL welds
+    allWelds = {}
+    originalC0s = {}
     
-    -- Find ALL welds on this model
+    -- Find ALL welds
     for _, desc in ipairs(model:GetDescendants()) do
         if desc:IsA("Weld") then
             table.insert(allWelds, desc)
+            table.insert(originalC0s, desc.C0)
         end
     end
     
-    -- Also check if model itself is a part with welds
     if model:IsA("BasePart") then
         for _, desc in ipairs(model:GetChildren()) do
             if desc:IsA("Weld") then
                 table.insert(allWelds, desc)
+                table.insert(originalC0s, desc.C0)
             end
         end
     end
     
-    -- Set primary weld for display
-    targetWeld = allWelds[1]
-    
-    self:UpdateCoordDisplay()
-    
-    if statusLabel then
-        statusLabel.Text = "Slot: " .. currentSlot .. " | Model: " .. model.Name .. " | Welds: " .. #allWelds
+    -- Reset sliders to 0
+    for _, slider in pairs(sliders) do
+        self:SetSliderValue(slider, 0)
     end
     
-    print("[ItemAdjuster] Found " .. #allWelds .. " welds on " .. model.Name)
-    for i, w in ipairs(allWelds) do
-        print("  " .. i .. ". " .. w.Name .. " (Part0=" .. (w.Part0 and w.Part0.Name or "nil") .. ")")
+    if slotLabel then
+        slotLabel.Text = "Slot: " .. currentSlot .. " | " .. model.Name .. " | Welds: " .. #allWelds
     end
+    
+    print("[ItemAdjuster] Selected: " .. model.Name .. " (" .. #allWelds .. " welds)")
 end
 
 function ItemAdjuster:SwitchSlot()
+    local items = self:FindEquippedItems()
+    if #items == 0 then return end
+    
+    -- Find current index
     local currentIndex = 1
-    for i, slot in ipairs(ADJUSTABLE_SLOTS) do
-        if slot == currentSlot then
+    for i, item in ipairs(items) do
+        if item == targetModel then
             currentIndex = i
             break
         end
     end
     
-    -- Find next slot with equipped item
-    for i = 1, #ADJUSTABLE_SLOTS do
-        local nextIndex = ((currentIndex - 1 + i) % #ADJUSTABLE_SLOTS) + 1
-        local nextSlot = ADJUSTABLE_SLOTS[nextIndex]
-        local found = self:FindEquippedItem(nextSlot)
-        if found then
-            currentSlot = nextSlot
-            self:SelectTarget(found)
-            self:SetHighlight(true)
-            print("[ItemAdjuster] Switched to slot: " .. currentSlot)
-            return
-        end
-    end
-    
-    print("[ItemAdjuster] No other equipped items found!")
-end
-
-function ItemAdjuster:SetHighlight(enabled)
-    if not targetModel then return end
-    
-    -- Remove existing highlight
-    local existing = targetModel:FindFirstChild("AdjustHighlight")
-    if existing then
-        existing:Destroy()
-    end
-    
-    if enabled then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "AdjustHighlight"
-        highlight.FillColor = Color3.fromRGB(255, 215, 0)
-        highlight.FillTransparency = 0.7
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0
-        highlight.Adornee = targetModel
-        highlight.Parent = targetModel
-    end
-end
-
-function ItemAdjuster:UpdateCoordDisplay()
-    if not targetModel or not coordLabel then return end
-    
-    local cf
-    if targetModel:IsA("Model") then
-        cf = targetModel:GetPivot()
-    else
-        cf = targetModel.CFrame
-    end
-    
-    local pos = cf.Position
-    local rx, ry, rz = cf:ToEulerAnglesXYZ()
-    
-    coordLabel.Text = string.format(
-        "Pos: %.2f, %.2f, %.2f | Rot: %.1f, %.1f, %.1f",
-        pos.X, pos.Y, pos.Z,
-        math.deg(rx), math.deg(ry), math.deg(rz)
-    )
-end
-
-function ItemAdjuster:OnMouseDown(input)
-    if not isActive or not targetModel then return end
-    
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDragging = true
-        lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
-    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isRotating = true
-        lastMousePos = Vector2.new(input.Position.X, input.Position.Y)
-    end
-end
-
-function ItemAdjuster:OnMouseUp(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDragging = false
-    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isRotating = false
-    end
-    lastMousePos = nil
-end
-
-function ItemAdjuster:OnMouseMove(input)
-    if not isActive or not targetModel then return end
-    
-    local currentPos = Vector2.new(input.Position.X, input.Position.Y)
-    if not lastMousePos then
-        lastMousePos = currentPos
-        return
-    end
-    
-    local delta = currentPos - lastMousePos
-    lastMousePos = currentPos
-    
-    if isDragging then
-        -- Move based on camera direction
-        local camera = workspace.CurrentCamera
-        if not camera then return end
-        
-        local right = camera.CFrame.RightVector
-        local up = camera.CFrame.UpVector
-        
-        local offset = (right * delta.X + up * -delta.Y) * DRAG_SPEED
-        self:ApplyOffset(offset)
-        
-    elseif isRotating then
-        -- Rotate
-        local rotX = -delta.Y * ROTATE_SPEED
-        local rotY = -delta.X * ROTATE_SPEED
-        self:ApplyRotation(rotX, rotY, 0)
-    end
-end
-
-function ItemAdjuster:OnScroll(input)
-    if not isActive or not targetModel then return end
-    
-    local direction = input.Position.Z > 0 and 1 or -1
-    local camera = workspace.CurrentCamera
-    if not camera then return end
-    
-    local forward = camera.CFrame.LookVector
-    local offset = forward * direction * SCROLL_SPEED
-    self:ApplyOffset(offset)
-end
-
-function ItemAdjuster:ApplyOffset(offset)
-    if not targetModel then return end
-    
-    local cfOffset = CFrame.new(offset.X, offset.Y, offset.Z)
-    
-    -- Adjust ALL welds
-    if allWelds and #allWelds > 0 then
-        for _, weld in ipairs(allWelds) do
-            if weld:IsA("Weld") then
-                weld.C0 = weld.C0 * cfOffset
-            end
-        end
-    end
-    
-    self:UpdateCoordDisplay()
-end
-
-function ItemAdjuster:ApplyRotation(rx, ry, rz)
-    if not targetModel then return end
-    
-    local rotCF = CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
-    
-    -- Adjust ALL welds
-    if allWelds and #allWelds > 0 then
-        for _, weld in ipairs(allWelds) do
-            if weld:IsA("Weld") then
-                weld.C0 = weld.C0 * rotCF
-            end
-        end
-    end
-    
-    self:UpdateCoordDisplay()
+    -- Next
+    local nextIndex = (currentIndex % #items) + 1
+    self:SelectTarget(items[nextIndex])
 end
 
 function ItemAdjuster:Reset()
-    if not targetModel then return end
-    
-    -- Ask server for default offset
-    local AdminEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AdminEvent")
-    if AdminEvent then
-        AdminEvent:FireServer("reset_visual", {slot = currentSlot})
+    -- Reset all welds to original C0
+    for i, weld in ipairs(allWelds) do
+        if weld and weld.Parent and originalC0s[i] then
+            weld.C0 = originalC0s[i]
+        end
     end
     
-    print("[ItemAdjuster] Reset requested for " .. currentSlot)
+    -- Reset sliders
+    for _, slider in pairs(sliders) do
+        self:SetSliderValue(slider, 0)
+    end
+    
+    print("[ItemAdjuster] Reset to original position.")
 end
 
 function ItemAdjuster:CopyToClipboard()
-    if not targetModel then return end
+    local px = sliders.posX.value
+    local py = sliders.posY.value
+    local pz = sliders.posZ.value
+    local rx = sliders.rotX.value
+    local ry = sliders.rotY.value
+    local rz = sliders.rotZ.value
     
-    local cf
-    if targetModel:IsA("Model") then
-        cf = targetModel:GetPivot()
-    else
-        cf = targetModel.CFrame
-    end
-    
-    local pos = cf.Position
-    local rx, ry, rz = cf:ToEulerAnglesXYZ()
-    
-    -- Generate Lua code for Items.lua
     local code = string.format(
         'offset = CFrame.new(%.2f, %.2f, %.2f) * CFrame.Angles(math.rad(%.1f), math.rad(%.1f), math.rad(%.1f))',
-        pos.X, pos.Y, pos.Z,
-        math.deg(rx), math.deg(ry), math.deg(rz)
+        px, py, pz, rx, ry, rz
     )
     
-    -- Copy to clipboard (Roblox has limited clipboard support)
-    -- Print to output for manual copy
     print("========================================")
     print("[ADJUST] " .. currentSlot .. ":")
     print("  " .. code)
     print("========================================")
     print(">> Copy the line above to Items.lua visual.offset")
-    
-    if statusLabel then
-        statusLabel.Text = "Slot: " .. currentSlot .. " | Copied to Output! Check console."
-    end
 end
 
--- Input handling
 function ItemAdjuster:HandleInput(input, gameProcessed)
     if not isActive then return end
-    
-    -- Don't process if typing
     if gameProcessed then return end
     
-    -- Key binds
     if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == Enum.KeyCode.Tab then
+        if input.KeyCode == Enum.KeyCode.T then
+            self:Deactivate()
+            return true
+        elseif input.KeyCode == Enum.KeyCode.Tab then
             self:SwitchSlot()
             return true
         elseif input.KeyCode == Enum.KeyCode.C then
@@ -478,36 +518,7 @@ function ItemAdjuster:HandleInput(input, gameProcessed)
         end
     end
     
-    -- Mouse
-    if input.UserInputType == Enum.UserInputType.MouseButton1 
-        or input.UserInputType == Enum.UserInputType.MouseButton2 then
-        self:OnMouseDown(input)
-        return true
-    end
-    
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        self:OnScroll(input)
-        return true
-    end
-    
     return false
-end
-
-function ItemAdjuster:HandleInputEnd(input)
-    if not isActive then return end
-    
-    if input.UserInputType == Enum.UserInputType.MouseButton1 
-        or input.UserInputType == Enum.UserInputType.MouseButton2 then
-        self:OnMouseUp(input)
-    end
-end
-
-function ItemAdjuster:HandleMouseMove(input)
-    if not isActive then return end
-    
-    if isDragging or isRotating then
-        self:OnMouseMove(input)
-    end
 end
 
 function ItemAdjuster:IsActive()

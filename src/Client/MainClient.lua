@@ -83,7 +83,7 @@ AutoPanel:Create(playerGui)
 SkillBar:Create()
 QuestTracker:SetAutoPanel(AutoPanel)
 AdminPanel:Create(playerGui)
-ItemAdjuster:Create(playerGui)
+ItemAdjuster:Create()
 
 print("[Client] All UI created!")
 
@@ -421,11 +421,11 @@ UserInputService.InputBegan:Connect(function(input, processed)
         print("[Client] F9 pressed - Admin Panel")
         AdminPanel:Toggle()
     elseif input.KeyCode == Enum.KeyCode.T then
-        -- Only open adjuster, closing is handled inside ItemAdjuster
         if not ItemAdjuster:IsActive() then
             print("[Client] T pressed - Item Adjuster")
             ItemAdjuster:Activate()
         end
+        -- Closing is handled in separate InputBegan above
     end
     
     -- Pass to ItemAdjuster if active
@@ -439,16 +439,12 @@ RunService.RenderStepped:Connect(function()
     SkillBar:UpdateCooldowns()
 end)
 
--- ItemAdjuster mouse handling
-UserInputService.InputEnded:Connect(function(input)
-    ItemAdjuster:HandleInputEnd(input)
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        ItemAdjuster:HandleMouseMove(input)
-    elseif input.UserInputType == Enum.UserInputType.MouseWheel then
-        ItemAdjuster:HandleInput(input, false)
+-- ItemAdjuster input (T to close when active)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if ItemAdjuster:IsActive() and not processed then
+        if input.KeyCode == Enum.KeyCode.T then
+            ItemAdjuster:Deactivate()
+        end
     end
 end)
 
