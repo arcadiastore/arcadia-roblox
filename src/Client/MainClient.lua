@@ -64,6 +64,7 @@ local InventoryUI = require(ClientModules:WaitForChild("InventoryUI"))
 local AutoPanel = require(ClientModules:WaitForChild("AutoPanel"))
 local SkillBar = require(ClientModules:WaitForChild("SkillBar"))
 local AdminPanel = require(ClientModules:WaitForChild("AdminPanel"))
+local ItemAdjuster = require(ClientModules:WaitForChild("ItemAdjuster"))
 
 print("[Client] All modules loaded!")
 
@@ -82,6 +83,7 @@ AutoPanel:Create(playerGui)
 SkillBar:Create()
 QuestTracker:SetAutoPanel(AutoPanel)
 AdminPanel:Create(playerGui)
+ItemAdjuster:Create(playerGui)
 
 print("[Client] All UI created!")
 
@@ -418,12 +420,35 @@ UserInputService.InputBegan:Connect(function(input, processed)
     elseif input.KeyCode == Enum.KeyCode.F9 then
         print("[Client] F9 pressed - Admin Panel")
         AdminPanel:Toggle()
+    elseif input.KeyCode == Enum.KeyCode.T then
+        if not ItemAdjuster:IsActive() then
+            print("[Client] T pressed - Item Adjuster")
+            ItemAdjuster:Toggle()
+        end
+    end
+    
+    -- Pass to ItemAdjuster if active
+    if ItemAdjuster:IsActive() then
+        ItemAdjuster:HandleInput(input, false)
     end
 end)
 
 -- Update skill cooldowns every frame
 RunService.RenderStepped:Connect(function()
     SkillBar:UpdateCooldowns()
+end)
+
+-- ItemAdjuster mouse handling
+UserInputService.InputEnded:Connect(function(input)
+    ItemAdjuster:HandleInputEnd(input)
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        ItemAdjuster:HandleMouseMove(input)
+    elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+        ItemAdjuster:HandleInput(input, false)
+    end
 end)
 
 print("[Client] Equipment & Inventory connected!")
