@@ -87,8 +87,58 @@ print("[Server] Events created!")
 -- PLAYER CONNECTIONS
 -- ============================================
 
+-- EQUIPMENT ADJUST TOOL: /adjust itemId X Y Z rotX rotY rotZ
+-- Contoh: /adjust iron_sword 0.8 -0.3 0 0 0 -90
+-- Hasilnya print ke console, copy ke Items.lua
 Players.PlayerAdded:Connect(function(player)
     PlayerData:Init(player)
+    
+    -- Chat command untuk adjust equipment offset
+    player.Chatted:Connect(function(msg)
+        local args = string.split(msg, " ")
+        if args[1] == "/adjust" and #args >= 4 then
+            local itemId = args[2]
+            local x = tonumber(args[3]) or 0
+            local y = tonumber(args[4]) or 0
+            local z = tonumber(args[5]) or 0
+            local rx = tonumber(args[6]) or 0
+            local ry = tonumber(args[7]) or 0
+            local rz = tonumber(args[8]) or 0
+            
+            -- Cari part yang equipped
+            local character = player.Character
+            if not character then return end
+            
+            local equipPart = character:FindFirstChild("Equip_" .. itemId)
+            if not equipPart then
+                -- Coba cari dengan suffix
+                for _, child in ipairs(character:GetChildren()) do
+                    if child.Name:sub(1, #("Equip_" .. itemId)) == "Equip_" .. itemId then
+                        equipPart = child
+                        break
+                    end
+                end
+            end
+            
+            if equipPart then
+                local bodyPart = character:FindFirstChild("RightUpperArm") or character:FindFirstChild("Right Arm")
+                if bodyPart then
+                    local offset = CFrame.new(x, y, z) * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+                    local relCF = CFrame.new()  -- Reset relative
+                    -- Recalculate all equip parts for this item
+                    equipPart.CFrame = bodyPart.CFrame * offset
+                    
+                    -- Print untuk copy ke Items.lua
+                    print("========================================")
+                    print("[ADJUST] " .. itemId .. ":")
+                    print("  offset = CFrame.new(" .. x .. ", " .. y .. ", " .. z .. ") * CFrame.Angles(math.rad(" .. rx .. "), math.rad(" .. ry .. "), math.rad(" .. rz .. "))")
+                    print("========================================")
+                end
+            else
+                print("[ADJUST] Equip_" .. itemId .. " not found! Equip item first.")
+            end
+        end
+    end)
     
     -- Track when character dies (connect FIRST)
     player.CharacterAdded:Connect(function(character)
