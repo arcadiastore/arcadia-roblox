@@ -124,7 +124,7 @@ function AdminSystem:GiveItem(player, itemId, quantity, targetPlayerName)
     local added = false
     if itemData.stackable then
         for i, slot in ipairs(pData.inventory) do
-            if slot.id == itemId then
+            if slot.itemId == itemId then
                 slot.quantity = (slot.quantity or 1) + quantity
                 added = true
                 break
@@ -134,7 +134,7 @@ function AdminSystem:GiveItem(player, itemId, quantity, targetPlayerName)
     
     if not added then
         for i = 1, quantity do
-            table.insert(pData.inventory, {id = itemId, quantity = 1})
+            table.insert(pData.inventory, {itemId = itemId, quantity = 1})
         end
     end
     
@@ -292,7 +292,7 @@ function AdminSystem:GiveAllItems(player)
     local count = 0
     for id, data in pairs(GameData.Items or {}) do
         if data.type == "equipment" then
-            table.insert(pData.inventory, {id = id, quantity = 1})
+            table.insert(pData.inventory, {itemId = id, quantity = 1})
             count = count + 1
         end
     end
